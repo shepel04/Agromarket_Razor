@@ -1,0 +1,84 @@
+﻿@model IEnumerable<dynamic>
+
+@{
+    ViewData["Title"] = "Адмін Панель";
+}
+
+<h2>Список користувачів</h2>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>Email</th>
+        <th>Поточна роль</th>
+        <th>Нова роль</th>
+        <th>Дія</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var user in Model)
+    {
+        <tr>
+            <td>@user.Email</td>
+            <td>@user.Role</td>
+            <td>
+                <select id="roleSelect-@user.Id" class="form-select">
+                    @foreach (var role in ViewBag.Roles)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </select>
+            </td>
+            <td>
+                <button type="button" class="btn btn-primary mt-1" data-bs-toggle="modal"
+                        data-bs-target="#confirmModal"
+                        data-userid="@user.Id"
+                        data-email="@user.Email">
+                    Змінити роль
+                </button>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<!-- Bootstrap Modal (Діалогове вікно підтвердження) -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Підтвердження зміни ролі</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Ви впевнені, що хочете змінити роль для <strong id="modalEmail"></strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <form id="changeRoleForm" method="post" asp-action="ChangeRole">
+                    <input type="hidden" name="userId" id="modalUserId" />
+                    <input type="hidden" name="newRole" id="modalRole" />
+                    <button type="submit" class="btn btn-danger">Підтвердити</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript для роботи модального вікна -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var confirmModal = document.getElementById("confirmModal");
+
+        confirmModal.addEventListener("show.bs.modal", function (event) {
+            var button = event.relatedTarget;
+            var userId = button.getAttribute("data-userid");
+            var email = button.getAttribute("data-email");
+            var selectedRole = document.getElementById("roleSelect-" + userId).value;
+
+            document.getElementById("modalEmail").innerText = email;
+            document.getElementById("modalUserId").value = userId;
+            document.getElementById("modalRole").value = selectedRole;
+        });
+    });
+</script>
