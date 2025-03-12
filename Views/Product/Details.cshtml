@@ -1,0 +1,41 @@
+﻿@model Agromarket.Models.Product
+
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<div class="container">
+    <h2 class="mb-4">@Model.Name</h2>
+
+    <div class="row">
+        <div class="col-md-6">
+            @if (Model.ImageData != null)
+            {
+                var base64 = Convert.ToBase64String(Model.ImageData);
+                var imgSrc = $"data:image/png;base64,{base64}";
+                <img src="@imgSrc" class="img-fluid" alt="@Model.Name">
+            }
+            else
+            {
+                <img src="/img/no-image.png" class="img-fluid" alt="Немає фото">
+            }
+        </div>
+        <div class="col-md-6">
+            <p><strong>Опис:</strong> @Model.Description</p>
+            <p><strong>Ціна:</strong> @(Model.SellingPrice.HasValue ? Model.SellingPrice.Value.ToString("0.00") + " грн" : "Не вказано")</p>
+            <p><strong>В наявності:</strong> @Model.StockQuantity @Model.Unit</p>
+            <p><strong>Сезон:</strong> @Model.SeasonStartMonth - @Model.SeasonEndMonth</p>
+
+            <a href="/" class="btn btn-secondary">На головну</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .img-fluid {
+        max-height: 400px;
+        object-fit: contain;
+        background: #f8f9fa;
+        padding: 10px;
+    }
+</style>

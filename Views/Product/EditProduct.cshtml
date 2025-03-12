@@ -1,0 +1,51 @@
+﻿@model Agromarket.Models.Product
+
+@{
+    ViewData["Title"] = "Редагувати товар";
+}
+
+<h2>Редагувати товар</h2>
+
+<form asp-action="EditProduct" method="post" enctype="multipart/form-data">
+    <input type="hidden" asp-for="Id" />
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" required />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Description" class="form-label"></label>
+        <textarea asp-for="Description" class="form-control" required></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="SeasonStartMonth" class="form-label"></label>
+        <select asp-for="SeasonStartMonth" class="form-select">
+            @foreach (var month in ViewBag.Months)
+            {
+                <option value="@month">@month</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="SeasonEndMonth" class="form-label"></label>
+        <select asp-for="SeasonEndMonth" class="form-select">
+            @foreach (var month in ViewBag.Months)
+            {
+                <option value="@month">@month</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Оновити фото товару</label>
+        <input type="file" name="imageFile" class="form-control" accept="image/*" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Зберегти зміни</button>
+    <a asp-action="ProductList" class="btn btn-secondary">Назад</a>
+</form>

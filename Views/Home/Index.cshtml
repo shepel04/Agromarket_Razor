@@ -1,8 +1,73 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model IEnumerable<Agromarket.Models.Product>
+
+@{
+    ViewData["Title"] = "Головна";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<h2 class="text-center mb-4">Популярні товари</h2>
+
+@if (Model.Any())
+{
+    <div id="productCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+            @for (int i = 0; i < Model.Count(); i++)
+            {
+                var product = Model.ElementAt(i);
+                var base64 = product.ImageData != null ? Convert.ToBase64String(product.ImageData) : null;
+                var imgSrc = base64 != null ? $"data:image/png;base64,{base64}" : "/img/no-image.png";
+
+                <div class="carousel-item @(i == 0 ? "active" : "")">
+                    <div class="card text-center">
+                        <a href="@Url.Action("Details", "Product", new { id = product.Id })">
+                            <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name">
+                        </a>
+                        <div class="card-body">
+                            <h5 class="card-title">@product.Name</h5>
+                            <p class="card-text">@product.Description</p>
+                            <p class="card-text"><strong>Ціна:</strong> @(product.SellingPrice.HasValue ? product.SellingPrice.Value.ToString("0.00") + " грн" : "Не вказано")</p>
+                            <p class="text-muted">В наявності: @product.StockQuantity @product.Unit</p>
+                            <a href="@Url.Action("Details", "Product", new { id = product.Id })" class="btn btn-primary">Детальніше</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Попередній</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Наступний</span>
+        </button>
+    </div>
+}
+else
+{
+    <p class="text-center text-muted">Наразі немає товарів у складському обліку.</p>
+}
+
+<!-- Стилі для каруселі -->
+<style>
+    .carousel {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .product-image {
+        max-height: 300px;
+        object-fit: contain;
+        padding: 10px;
+        background: #f8f9fa;
+    }
+
+    .carousel-inner {
+        text-align: center;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+</style>

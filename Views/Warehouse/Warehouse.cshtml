@@ -1,0 +1,163 @@
+﻿@model IEnumerable<Agromarket.Models.Product>
+
+@{
+    ViewData["Title"] = "Складський облік";
+}
+
+<h2>Складський облік</h2>
+
+<!-- Кнопка "Створити нове надходження" -->
+<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#newReceiptModal">Створити нове надходження</button>
+
+<!-- Таблиця товарів -->
+<table class="table">
+    <thead>
+    <tr>
+        <th>Назва</th>
+        <th>Кількість</th>
+        <th>Одиниця виміру</th>
+        <th>Ціна закупівлі</th>
+        <th>Ціна продажу</th>
+        <th>Залишок строку придатності (тижні)</th>
+        <th>Дії</th>
+    </tr>
+    </thead>
+    <tbody>
+    @if (!Model.Any())
+    {
+        <tr>
+            <td colspan="7" class="text-center text-muted">Наразі немає товарів у складському обліку.</td>
+        </tr>
+    }
+    else
+    {
+        @foreach (var product in Model)
+        {
+            <tr>
+                <td>@product.Name</td>
+                <td>@product.StockQuantity</td>
+                <td>@product.Unit</td>
+                <td>@(product.PurchasePrice.HasValue ? product.PurchasePrice.Value.ToString("0.00") : "-")</td>
+                <td>@(product.SellingPrice.HasValue ? product.SellingPrice.Value.ToString("0.00") : "-")</td>
+                <td>
+                    @{
+                        int remainingWeeks = product.GetRemainingShelfLife();
+                        string color = remainingWeeks <= 1 ? "text-danger" : (remainingWeeks <= 2 ? "text-warning" : "text-success");
+                    }
+                    <span class="@color">@remainingWeeks тиж.</span>
+                </td>
+                <td>
+                    <!-- Кнопка списання товару -->
+                    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deductModal-@product.Id">Списати</button>
+                </td>
+            </tr>
+
+            <!-- Модальне вікно списання товару -->
+            <div class="modal fade" id="deductModal-@product.Id" tabindex="-1" aria-labelledby="deductModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Списання товару: @product.Name</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <form asp-controller="Warehouse" asp-action="DeductStock" method="post">
+                            <div class="modal-body">
+                                <input type="hidden" name="productId" value="@product.Id" />
+                                <div class="mb-3">
+                                    <label>Кількість для списання</label>
+                                    <input type="number" name="quantity" class="form-control" min="1" max="@product.StockQuantity" required />
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-danger">Списати</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    </tbody>
+</table>
+
+<!-- Модальне вікно для нового надходження -->
+<div class="modal fade" id="newReceiptModal" tabindex="-1" aria-labelledby="newReceiptModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Створити нове надходження</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="stockForm" asp-controller="Warehouse" asp-action="ReceiveMultipleStock" method="post">
+                <div class="modal-body">
+                    <table class="table" id="stockTable">
+                        <thead>
+                        <tr>
+                            <th>Товар</th>
+                            <th>Кількість</th>
+                            <th>Одиниця виміру</th>
+                            <th>Ціна закупівлі</th>
+                            <th>Ціна продажу</th>
+                            <th>Строк придатності (тижні)</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr class="stock-item">
+                            <td>
+                                <select name="stockItems[0].ProductId" class="form-select">
+                                    @foreach (var product in ViewBag.Products)
+                                    {
+                                        <option value="@product.Id">@product.Name</option>
+                                    }
+                                </select>
+                            </td>
+                            <td><input type="number" name="stockItems[0].Quantity" class="form-control" required /></td>
+                            <td>
+                                <select name="stockItems[0].UnitOfMeasurement" class="form-select">
+                                    <option value="кг" selected>Кілограми</option>
+                                    <option value="шт">Штуки</option>
+                                </select>
+                            </td>
+                            <td><input type="number" step="0.01" name="stockItems[0].PurchasePrice" class="form-control" required /></td>
+                            <td><input type="number" step="0.01" name="stockItems[0].SellingPrice" class="form-control" required /></td>
+                            <td><input type="number" name="stockItems[0].ShelfLifeWeeks" class="form-control" value="4" required /></td>
+                            <td><button type="button" class="btn btn-danger remove-item">🗑</button></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <button type="button" class="btn btn-secondary" id="addStockItem">Додати товар</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Зберегти</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript для динамічного додавання товарів -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let stockIndex = 1;
+        document.getElementById("addStockItem").addEventListener("click", function () {
+            let newRow = document.querySelector(".stock-item").cloneNode(true);
+            newRow.querySelectorAll("input, select").forEach(function (input) {
+                let name = input.getAttribute("name");
+                if (name) {
+                    input.setAttribute("name", name.replace(/\[\d+\]/, `[${stockIndex}]`));
+                }
+                input.value = "";
+            });
+
+            newRow.querySelector("select[name$='.UnitOfMeasurement']").value = "кг";
+
+            newRow.querySelector(".remove-item").addEventListener("click", function () {
+                newRow.remove();
+            });
+
+            document.querySelector("#stockTable tbody").appendChild(newRow);
+            stockIndex++;
+        });
+    });
+</script>

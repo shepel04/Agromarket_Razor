@@ -33,6 +33,26 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="Admin" asp-action="Index">Адмін Панель</a>
                         </li>
                     }
+
+                    @if (User.IsInRole("warehousemanager") || User.IsInRole("admin"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Product" asp-action="AddProduct">Додати товар</a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Product" asp-action="ProductList">Список товарів</a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Warehouse" asp-action="Warehouse">Складський облік</a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Warehouse" asp-action="StockHistory">Історія операцій</a>
+                        </li>   
+
+                    }
                 </ul>
                 <partial name="_LoginPartial"/>
             </div>

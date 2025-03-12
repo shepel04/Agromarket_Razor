@@ -1,0 +1,76 @@
+﻿@model IEnumerable<Agromarket.Models.StockTransaction>
+
+@{
+    ViewData["Title"] = "Історія надходжень та списань";
+    string selectedFilter = ViewBag.FilterType as string ?? "";
+}
+
+<h2>Історія надходжень та списань</h2>
+
+<!-- Форма фільтрації -->
+<form method="get" class="mb-3">
+    <label for="filterType">Фільтр по типу операції:</label>
+    <select name="filterType" id="filterType" class="form-select" onchange="this.form.submit()">
+        @if (string.IsNullOrEmpty(selectedFilter))
+        {
+            <option value="" selected>Усі операції</option>
+        }
+        else
+        {
+            <option value="">Усі операції</option>
+        }
+
+        @if (selectedFilter == "Надходження")
+        {
+            <option value="Надходження" selected>Надходження</option>
+        }
+        else
+        {
+            <option value="Надходження">Надходження</option>
+        }
+
+        @if (selectedFilter == "Списання")
+        {
+            <option value="Списання" selected>Списання</option>
+        }
+        else
+        {
+            <option value="Списання">Списання</option>
+        }
+    </select>
+</form>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>Дата</th>
+        <th>Товар</th>
+        <th>Тип операції</th>
+        <th>Кількість</th>
+        <th>Ціна закупівлі</th>
+        <th>Ціна продажу</th>
+    </tr>
+    </thead>
+    <tbody>
+    @if (!Model.Any())
+    {
+        <tr>
+            <td colspan="6" class="text-center text-muted">Записи не знайдено.</td>
+        </tr>
+    }
+    else
+    {
+        @foreach (var transaction in Model)
+        {
+            <tr class="@(transaction.TransactionType == "Списання" ? "table-danger" : "table-success")">
+                <td>@transaction.TransactionDate.ToString("dd.MM.yyyy HH:mm")</td>
+                <td>@transaction.Product?.Name</td>
+                <td>@transaction.TransactionType</td>
+                <td>@transaction.Quantity</td>
+                <td>@(transaction.PurchasePrice.HasValue ? transaction.PurchasePrice.Value.ToString("0.00") : "-")</td>
+                <td>@(transaction.SellingPrice.HasValue ? transaction.SellingPrice.Value.ToString("0.00") : "-")</td>
+            </tr>
+        }
+    }
+    </tbody>
+</table>

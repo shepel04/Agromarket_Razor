@@ -278,3 +278,4 @@ D:\Razor\Agromarket\obj\Debug\net9.0\Agromarket.genruntimeconfig.cache
 D:\Razor\Agromarket\obj\Debug\net9.0\ref\Agromarket.dll
 D:\Razor\Agromarket\bin\Debug\net9.0\Npgsql.dll
 D:\Razor\Agromarket\bin\Debug\net9.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
+D:\Razor\Agromarket\obj\Debug\net9.0\Agromarket.sourcelink.json

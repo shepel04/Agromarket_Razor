@@ -1,0 +1,89 @@
+﻿@model Agromarket.Models.Product
+
+@{
+    ViewData["Title"] = "Додати товар";
+}
+
+<h2>Додати товар</h2>
+
+<form id="productForm" asp-action="AddProduct" method="post" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" id="nameInput" required />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Description" class="form-label"></label>
+        <textarea asp-for="Description" class="form-control" id="descriptionInput" required></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="SeasonStartMonth" class="form-label"></label>
+        <select asp-for="SeasonStartMonth" class="form-select" id="seasonStartInput">
+            @foreach (var month in ViewBag.Months)
+            {
+                <option value="@month">@month</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="SeasonEndMonth" class="form-label"></label>
+        <select asp-for="SeasonEndMonth" class="form-select" id="seasonEndInput">
+            @foreach (var month in ViewBag.Months)
+            {
+                <option value="@month">@month</option>
+            }
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Фото товару</label>
+        <input type="file" id="imageFile" name="imageFile" class="form-control" accept="image/*" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Додати</button>
+</form>
+
+<!-- Модальне вікно Bootstrap -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="successModalLabel">Успіх</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @ViewBag.SuccessMessage
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript для очищення форми після успішного додавання -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var successMessage = "@ViewBag.SuccessMessage";
+
+        if (successMessage && successMessage.trim() !== "") {
+            var successModal = new bootstrap.Modal(document.getElementById('successModal'));
+            successModal.show();
+
+            // Очищення полів форми після закриття модального вікна
+            successModal._element.addEventListener('hidden.bs.modal', function () {
+                document.getElementById("nameInput").value = "";
+                document.getElementById("descriptionInput").value = "";
+                document.getElementById("seasonStartInput").selectedIndex = 0;
+                document.getElementById("seasonEndInput").selectedIndex = 0;
+                document.getElementById("imageFile").value = "";
+            });
+        }
+    });
+</script>
+
+

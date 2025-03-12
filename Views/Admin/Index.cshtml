@@ -1,10 +1,16 @@
 ﻿@model IEnumerable<dynamic>
 
 @{
-    ViewData["Title"] = "Адмін Панель";
+    ViewData["Title"] = "Панель Адміністратора";
 }
 
 <h2>Список користувачів</h2>
+
+<div class="mb-3">
+    <button type="button" class="btn btn-success" onclick="location.reload();">
+        Оновити
+    </button>
+</div>
 
 <table class="table">
     <thead>

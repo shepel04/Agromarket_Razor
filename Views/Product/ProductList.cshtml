@@ -1,0 +1,67 @@
+﻿@model IEnumerable<Agromarket.Models.Product>
+
+@{
+    ViewData["Title"] = "Список товарів";
+}
+
+<h2>Список товарів</h2>
+
+<!-- Форма пошуку -->
+<form asp-action="ProductList" method="get" class="mb-3 d-flex">
+    <input type="text" name="searchQuery" class="form-control me-2" placeholder="Пошук за назвою..." value="@Context.Request.Query["searchQuery"]">
+    <button type="submit" class="btn btn-primary">🔍</button>
+</form>
+
+<!-- Кнопки сортування -->
+<div class="mb-3">
+    <a asp-action="ProductList" asp-route-sortOrder="name_asc" class="btn btn-secondary">Сортувати А-Я</a>
+    <a asp-action="ProductList" asp-route-sortOrder="name_desc" class="btn btn-secondary">Сортувати Я-А</a>
+    <a asp-action="ProductList" asp-route-sortOrder="season" class="btn btn-secondary">Сортувати за сезонністю</a>
+</div>
+
+<!-- Таблиця товарів -->
+<table class="table">
+    <thead>
+    <tr>
+        <th>Фото</th>
+        <th>Назва</th>
+        <th>Опис</th>
+        <th>Сезон</th>
+        <th>Дії</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var product in Model)
+    {
+        bool isActive = product.IsInSeason();
+        string rowClass = isActive ? "" : "text-muted";
+        string opacityStyle = isActive ? "" : "opacity: 0.6;";
+
+        <tr class="@rowClass" style="@opacityStyle">
+            <td>
+                @if (product.ImageData != null)
+                {
+                    var base64 = Convert.ToBase64String(product.ImageData);
+                    var imgSrc = $"data:image/png;base64,{base64}";
+                    <img src="@imgSrc" alt="Фото товару" style="width: 100px; height: auto; @opacityStyle" />
+                }
+                else
+                {
+                    <span>Немає фото</span>
+                }
+            </td>
+            <td>@product.Name</td>
+            <td>@product.Description</td>
+            <td>@product.SeasonStartMonth - @product.SeasonEndMonth</td>
+            <td>
+                <a asp-action="EditProduct" asp-route-id="@product.Id" class="btn btn-warning btn-sm">Редагувати</a>
+
+                <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Ви впевнені, що хочете видалити цей товар?');">
+                    <input type="hidden" name="id" value="@product.Id" />
+                    <button type="submit" class="btn btn-danger btn-sm">Видалити</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
