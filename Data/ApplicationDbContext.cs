@@ -12,6 +12,7 @@ public class ApplicationDbContext : IdentityDbContext
     }
     
     public DbSet<Product> Products { get; set; }
+    public DbSet<Order> Orders { get; set; }
     
     public DbSet<StockTransaction> StockTransactions { get; set; }
     

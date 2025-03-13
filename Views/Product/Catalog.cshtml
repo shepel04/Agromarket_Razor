@@ -1,0 +1,81 @@
+﻿@model IEnumerable<Agromarket.Models.Product>
+
+@{
+    ViewData["Title"] = "Каталог товарів";
+}
+
+<h2 class="text-center mb-4">Каталог товарів</h2>
+
+<div class="row">
+    @foreach (var product in Model)
+    {
+        var base64 = product.ImageData != null ? Convert.ToBase64String(product.ImageData) : null;
+        var imgSrc = base64 != null ? $"data:image/png;base64,{base64}" : "/img/no-image.png";
+
+        <div class="col-6 col-md-4 col-lg-3 mb-4">
+            <a href="@Url.Action("Details", "Product", new { id = product.Id })" class="card-link">
+                <div class="card product-card h-100">
+                    <div class="image-container">
+                        <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name">
+                    </div>
+                    <div class="card-body text-center">
+                        <h6 class="card-title text-truncate">@product.Name</h6>
+                        <p class="card-text price">@product.SellingPrice?.ToString("0.00") грн</p>
+                        <p class="text-muted small">В наявності: @product.StockQuantity @product.Unit</p>
+                    </div>
+                </div>
+            </a>
+            <form asp-controller="Cart" asp-action="AddToCart" method="post" class="d-grid mt-2">
+                <input type="hidden" name="productId" value="@product.Id" />
+                <input type="hidden" name="name" value="@product.Name" />
+                <input type="hidden" name="price" value="@product.SellingPrice" />
+                <input type="hidden" name="unit" value="@product.Unit" />
+                <input type="hidden" name="imageBase64" value="@base64" />
+                <button type="submit" class="btn btn-success btn-sm">Додати в кошик</button>
+            </form>
+        </div>
+    }
+</div>
+
+<!-- CSS для нормалізації карток -->
+<style>
+    .product-card {
+        border: 1px solid #e0e0e0;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .product-card:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-link {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    /* Контейнер для квадратного фото */
+    .image-container {
+        width: 100%;
+        height: 180px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+    }
+
+    .product-image {
+        width: 180px;
+        height: 180px;
+        object-fit: cover;
+    }
+
+    .price {
+        font-weight: bold;
+        color: #d9534f;
+    }
+
+    .card-title {
+        font-size: 1rem;
+    }
+</style>

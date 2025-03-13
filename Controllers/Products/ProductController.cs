@@ -8,7 +8,7 @@ using System;
 
 namespace Agromarket.Controllers.Products
 {
-    [Authorize(Roles = "warehousemanager, admin")] // Доступ для warehousemanager і admin
+    [Authorize(Roles = "warehousemanager, admin, client")] // Доступ для warehousemanager і admin
     public class ProductController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -130,6 +130,37 @@ namespace Agromarket.Controllers.Products
             }
 
             return View(product);
+        }
+        
+        public IActionResult Catalog(string search, decimal? minPrice, decimal? maxPrice, bool inStock = false)
+        {
+            var products = _context.Products.AsQueryable();
+
+            // Фільтр по назві
+            if (!string.IsNullOrEmpty(search))
+            {
+                products = products.Where(p => p.Name.Contains(search));
+            }
+
+            // Фільтр по мінімальній ціні
+            if (minPrice.HasValue)
+            {
+                products = products.Where(p => p.SellingPrice >= minPrice.Value);
+            }
+
+            // Фільтр по максимальній ціні
+            if (maxPrice.HasValue)
+            {
+                products = products.Where(p => p.SellingPrice <= maxPrice.Value);
+            }
+
+            // Фільтр тільки в наявності
+            if (inStock)
+            {
+                products = products.Where(p => p.StockQuantity > 0);
+            }
+
+            return View(products.ToList());
         }
 
         private List<string> GetMonths()

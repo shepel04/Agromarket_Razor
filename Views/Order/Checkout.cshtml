@@ -1,0 +1,75 @@
+﻿@model Agromarket.Models.Order
+
+@{
+    ViewData["Title"] = "Оформлення замовлення";
+    bool isUserLoggedIn = !string.IsNullOrEmpty(Model.CustomerEmail);
+}
+
+<h2 class="text-center mb-4">Оформлення замовлення</h2>
+
+<form asp-action="Checkout" method="post">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="CustomerName" class="form-label"></label>
+                <input asp-for="CustomerName" class="form-control" required />
+                <span asp-validation-for="CustomerName" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="CustomerEmail" class="form-label"></label>
+
+                @if (isUserLoggedIn)
+                {
+                    <input asp-for="CustomerEmail" class="form-control" value="@Model.CustomerEmail" readonly />
+                }
+                else
+                {
+                    <input asp-for="CustomerEmail" class="form-control" required />
+                }
+
+                <span asp-validation-for="CustomerEmail" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="CustomerPhone" class="form-label"></label>
+                <input asp-for="CustomerPhone" class="form-control" required
+                       pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'')"
+                       placeholder="+380">
+                <span asp-validation-for="CustomerPhone" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="DeliveryAddress" class="form-label"></label>
+                <input asp-for="DeliveryAddress" class="form-control" required />
+                <span asp-validation-for="DeliveryAddress" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <h4>Ваше замовлення</h4>
+            <ul class="list-group mb-3">
+                @foreach (var item in ViewBag.CartItems)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>@item.Name (@item.Quantity @item.Unit)</span>
+                        <span>@(item.Price * item.Quantity) грн</span>
+                    </li>
+                }
+                <li class="list-group-item d-flex justify-content-between">
+                    <strong>Загальна сума:</strong>
+                    <strong>@ViewBag.TotalAmount грн</strong>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Підтвердити замовлення</button>
+</form>
+
+<!-- Додаємо клієнтську валідацію -->
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
+}
+    

@@ -1,0 +1,85 @@
+﻿@model List<Agromarket.Models.CartItem>
+
+@{
+    ViewData["Title"] = "Кошик";
+}
+
+<h2 class="text-center mb-4">Кошик</h2>
+
+@if (!Model.Any())
+{
+    <p class="text-center text-muted">Ваш кошик порожній.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Фото</th>
+            <th>Назва</th>
+            <th>Ціна</th>
+            <th>Кількість</th>
+            <th>Одиниця</th>
+            <th>Всього</th>
+            <th>Дії</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr data-product-id="@item.ProductId">
+                <td><img src="data:image/png;base64,@item.ImageBase64" style="width: 60px; height: auto;" /></td>
+                <td>@item.Name</td>
+                <td class="price">@item.Price.ToString("0.00") грн</td>
+                <td>
+                    <input type="number" class="form-control quantity" value="@item.Quantity" min="1" />
+                </td>
+                <td>@item.Unit</td>
+                <td class="total-item-price">@(item.Price * item.Quantity) грн</td>
+                <td>
+                    <a href="@Url.Action("RemoveFromCart", "Cart", new { productId = item.ProductId })" class="btn btn-danger btn-sm">Видалити</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <div class="text-end">
+        <h4>Загальна сума: <span id="totalPrice">@Model.Sum(p => p.Price * p.Quantity) грн</span></h4>
+        @if (Model.Any())
+        {
+            <div class="text-end">
+                <a href="@Url.Action("ClearCart", "Cart")" class="btn btn-warning">Очистити кошик</a>
+                <a href="@Url.Action("Checkout", "Order")" class="btn btn-success">Оформити замовлення</a>
+            </div>
+        }
+    </div>
+}
+
+<!-- JavaScript для автоматичного оновлення кошика -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll(".quantity").forEach(input => {
+            input.addEventListener("input", function () {
+                let row = this.closest("tr");
+                let productId = row.getAttribute("data-product-id");
+                let newQuantity = this.value;
+
+                fetch("/Cart/UpdateQuantityAjax", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: `productId=${productId}&quantity=${newQuantity}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        row.querySelector(".total-item-price").textContent = data.totalItemPrice.toFixed(2) + " грн";
+                        document.getElementById("totalPrice").textContent = data.totalPrice.toFixed(2) + " грн";
+                    }
+                });
+            });
+        });
+    });
+</script>

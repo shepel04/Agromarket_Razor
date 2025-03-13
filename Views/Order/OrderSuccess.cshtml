@@ -1,0 +1,35 @@
+﻿@{
+    ViewData["Title"] = "Замовлення успішно оформлене!";
+}
+
+<div class="container text-center mt-5">
+    <!-- Блок з зеленою галочкою -->
+    <div class="success-icon">
+        <i class="bi bi-check-circle-fill"></i>
+    </div>
+
+    <h2 class="text-success mt-3">Замовлення успішно оформлене!</h2>
+    <p class="text-muted">Дякуємо за ваше замовлення. Ми скоро зв’яжемося з вами для підтвердження.</p>
+
+    <!-- Кнопки -->
+    <a href="/" class="btn btn-primary mt-3">Повернутися на головну</a>
+</div>
+
+<!-- Стилі -->
+<style>
+    .success-icon {
+        font-size: 100px;
+        color: #28a745;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px;
+    }
+
+    .bi-check-circle-fill {
+        font-size: 120px;
+    }
+</style>
+
+<!-- Підключення Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
