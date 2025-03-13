@@ -1,0 +1,53 @@
+﻿@model IEnumerable<Agromarket.Models.Order>
+
+@{
+    ViewData["Title"] = "Історія замовлень";
+}
+
+<h2 class="mb-4">Історія замовлень</h2>
+
+@if (!Model.Any())
+{
+    <p class="text-muted">У вас ще немає замовлень.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Дата</th>
+            <th>Сума</th>
+            <th>Статус</th>
+            <th>Деталі</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var order in Model)
+        {
+            <tr>
+                <td>@order.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
+                <td>@order.TotalAmount грн</td>
+                <td><span class="badge bg-success">Виконано</span></td>
+                <td>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#order-@order.Id">
+                        Деталі
+                    </button>
+                </td>
+            </tr>
+            <tr id="order-@order.Id" class="collapse">
+                <td colspan="4">
+                    <ul class="list-group">
+                        @foreach (var item in order.OrderItems)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>@item.ProductName (@item.Quantity @item.Unit)</span>
+                                <span>@(item.Price * item.Quantity) грн</span>
+                            </li>
+                        }
+                    </ul>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

@@ -2,6 +2,25 @@
 
 @{
     ViewData["Title"] = "Головна";
+
+    // Словник іконок для категорій
+    var categoryIcons = new Dictionary<string, string>
+    {
+        { "Фрукти", "🍎" },
+        { "Овочі", "🥕" },
+        { "Ягоди", "🍓" },
+        { "Зелень", "🌿" },
+        { "Горіхи", "🥜" },
+        { "Зернові та бобові", "🌾" },
+        { "Молочні продукти", "🥛" },
+        { "М'ясо та птиця", "🍗" },
+        { "Риба та морепродукти", "🐟" },
+        { "Напої", "🥤" },
+        { "Мед та продукти бджільництва", "🍯" },
+        { "Бакалія", "🛒" },
+        { "Випічка та хліб", "🥖" },
+        { "Яйця", "🥚" }
+    };
 }
 
 <h2 class="text-center mb-4">Популярні товари</h2>
@@ -48,7 +67,26 @@ else
     <p class="text-center text-muted">Наразі немає товарів у складському обліку.</p>
 }
 
-<!-- Стилі для каруселі -->
+@if (Model.Any())
+{
+    <h3 class="text-center mt-5">Категорії товарів</h3>
+    <div class="container">
+        <div class="row justify-content-center">
+            @foreach (var category in Model.Select(p => p.Category).Where(c => !string.IsNullOrEmpty(c)).Distinct())
+            {
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-4">
+                    <a href="@Url.Action("Catalog", "Product", new { category = category })" class="category-card">
+                        <div class="category-icon">
+                            @(categoryIcons.ContainsKey(category) ? categoryIcons[category] : "🛍️")
+                        </div>
+                        <div class="category-name">@category</div>
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+}
+<!-- 🔹 Стилі для категорій -->
 <style>
     .carousel {
         max-width: 600px;
@@ -59,7 +97,7 @@ else
         max-height: 300px;
         object-fit: contain;
         padding: 10px;
-        background: #f8f9fa;
+        background: #ffffff;
     }
 
     .carousel-inner {
@@ -69,5 +107,41 @@ else
     .card {
         border: none;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .carousel-control-prev-icon,
+    .carousel-control-next-icon {
+        filter: invert(50%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(70%) contrast(90%);
+    }
+
+    /* Стилізація карток категорій */
+    .category-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        text-decoration: none;
+        color: black;
+        font-weight: bold;
+        transition: 0.3s;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .category-card:hover {
+        background: #e9ecef;
+        transform: scale(1.05);
+    }
+
+    .category-icon {
+        font-size: 40px;
+        margin-bottom: 10px;
+    }
+
+    .category-name {
+        font-size: 16px;
+        text-align: center;
     }
 </style>

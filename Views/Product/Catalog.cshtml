@@ -6,76 +6,170 @@
 
 <h2 class="text-center mb-4">Каталог товарів</h2>
 
-<div class="row">
-    @foreach (var product in Model)
-    {
-        var base64 = product.ImageData != null ? Convert.ToBase64String(product.ImageData) : null;
-        var imgSrc = base64 != null ? $"data:image/png;base64,{base64}" : "/img/no-image.png";
+<!-- Кнопка "Показати фільтри" -->
+<button id="showFilters" class="btn btn-dark position-fixed top-50 start-0 translate-middle-y">
+    <i class="bi bi-funnel-fill"></i> <!-- Іконка Bootstrap -->
+</button>
 
-        <div class="col-6 col-md-4 col-lg-3 mb-4">
-            <a href="@Url.Action("Details", "Product", new { id = product.Id })" class="card-link">
-                <div class="card product-card h-100">
-                    <div class="image-container">
-                        <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name">
-                    </div>
-                    <div class="card-body text-center">
-                        <h6 class="card-title text-truncate">@product.Name</h6>
-                        <p class="card-text price">@product.SellingPrice?.ToString("0.00") грн</p>
-                        <p class="text-muted small">В наявності: @product.StockQuantity @product.Unit</p>
-                    </div>
+<!-- Основний контейнер -->
+<div class="d-flex">
+    <!-- Бокове меню фільтрів -->
+    <div id="sidebar" class="sidebar bg-light p-3">
+        <button class="btn btn-outline-dark w-100 mb-3" id="toggleFilters">Сховати фільтри</button>
+
+        <form id="filterForm" asp-action="Catalog" method="get">
+            <div class="mb-3">
+                <input type="text" name="search" class="form-control" placeholder="Пошук за назвою" value="@Context.Request.Query["search"]" />
+            </div>
+
+            <div class="mb-3">
+                <select name="category" class="form-select">
+                    <option value="">Всі категорії</option>
+                    @foreach (var category in ViewBag.Categories)
+                    {
+                        <option value="@category" selected="@(Context.Request.Query["category"] == category ? "selected" : null)">@category</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <input type="number" name="minPrice" class="form-control" placeholder="Мін. ціна" value="@Context.Request.Query["minPrice"]" />
+            </div>
+
+            <div class="mb-3">
+                <input type="number" name="maxPrice" class="form-control" placeholder="Макс. ціна" value="@Context.Request.Query["maxPrice"]" />
+            </div>
+
+            <div class="form-check mb-3">
+                <input type="checkbox" name="inStock" class="form-check-input" value="true" @(Context.Request.Query["inStock"] == "true" ? "checked" : "") />
+                <label class="form-check-label">Тільки в наявності</label>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary">Застосувати</button>
+                <button type="button" id="resetFilters" class="btn btn-secondary mt-2">Скинути</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Контейнер каталогу -->
+    <div id="catalogContainer" class="container-fluid">
+        <div class="row">
+            @foreach (var product in Model)
+            {
+                var base64 = product.ImageData != null ? Convert.ToBase64String(product.ImageData) : null;
+                var imgSrc = base64 != null ? $"data:image/png;base64,{base64}" : "/img/no-image.png";
+
+                <div class="col-6 col-md-4 col-lg-3 mb-4">
+                    <a href="@Url.Action("Details", "Product", new { id = product.Id })" class="card-link">
+                        <div class="card product-card h-100">
+                            <div class="image-container">
+                                <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name">
+                            </div>
+                            <div class="card-body text-center">
+                                <h6 class="card-title text-truncate">@product.Name</h6>
+                                <p class="card-text price">@product.SellingPrice?.ToString("0.00") грн</p>
+                                <p class="text-muted small">В наявності: @product.StockQuantity @product.Unit</p>
+                            </div>
+                        </div>
+                    </a>
+                    <form asp-controller="Cart" asp-action="AddToCart" method="post" class="d-grid mt-2">
+                        <input type="hidden" name="productId" value="@product.Id" />
+                        <input type="hidden" name="name" value="@product.Name" />
+                        <input type="hidden" name="price" value="@product.SellingPrice" />
+                        <input type="hidden" name="unit" value="@product.Unit" />
+                        <input type="hidden" name="imageBase64" value="@base64" />
+                        <button type="submit" class="btn btn-success btn-sm">Додати в кошик</button>
+                    </form>
                 </div>
-            </a>
-            <form asp-controller="Cart" asp-action="AddToCart" method="post" class="d-grid mt-2">
-                <input type="hidden" name="productId" value="@product.Id" />
-                <input type="hidden" name="name" value="@product.Name" />
-                <input type="hidden" name="price" value="@product.SellingPrice" />
-                <input type="hidden" name="unit" value="@product.Unit" />
-                <input type="hidden" name="imageBase64" value="@base64" />
-                <button type="submit" class="btn btn-success btn-sm">Додати в кошик</button>
-            </form>
+            }
         </div>
-    }
+    </div>
 </div>
 
-<!-- CSS для нормалізації карток -->
+<!-- Стилі -->
 <style>
-    .product-card {
-        border: 1px solid #e0e0e0;
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    .d-flex {
+        position: relative;
     }
 
-    .product-card:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    /* Фільтри (сайдбар) */
+    .sidebar {
+        width: 250px;
+        min-height: 100vh;
+        transition: transform 0.3s ease-in-out;
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 1000;
+        overflow-y: auto;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     }
 
-    .card-link {
-        text-decoration: none;
-        color: inherit;
+    .sidebar.hidden {
+        transform: translateX(-5000%);
     }
 
-    /* Контейнер для квадратного фото */
-    .image-container {
-        width: 100%;
-        height: 180px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f8f9fa;
+    /* Контейнер каталогу */
+    #catalogContainer {
+        flex-grow: 1;
+        padding-left: 270px;
+        transition: padding-left 0.3s ease-in-out;
     }
 
-    .product-image {
-        width: 180px;
-        height: 180px;
-        object-fit: cover;
+    .sidebar.hidden + #catalogContainer {
+        padding-left: 20px;
     }
 
-    .price {
-        font-weight: bold;
-        color: #d9534f;
+    /* Кнопка для відкриття фільтрів */
+    #showFilters {
+        display: none;
+        z-index: 1001;
+        padding: 10px;
+        font-size: 20px;
+        border-radius: 0 5px 5px 0;
+        position: fixed;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
     }
 
-    .card-title {
-        font-size: 1rem;
+    /* Стилі кнопки "Приховати фільтри" */
+    .btn-outline-dark {
+        font-size: 14px;
+        text-transform: uppercase;
     }
 </style>
+
+<!-- Скрипт для роботи з фільтрами -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var toggleButton = document.getElementById('toggleFilters');
+        var showFiltersButton = document.getElementById('showFilters');
+        var sidebar = document.getElementById('sidebar');
+        var catalogContainer = document.getElementById('catalogContainer');
+        var resetButton = document.getElementById('resetFilters');
+        var filterForm = document.getElementById('filterForm');
+
+        toggleButton.addEventListener('click', function () {
+            sidebar.classList.add('hidden');
+            catalogContainer.style.paddingLeft = "20px";
+            showFiltersButton.style.display = "block";
+        });
+
+        showFiltersButton.addEventListener('click', function () {
+            sidebar.classList.remove('hidden');
+            catalogContainer.style.paddingLeft = "270px";
+            showFiltersButton.style.display = "none";
+        });
+
+        resetButton.addEventListener('click', function () {
+            filterForm.reset();
+            filterForm.submit(); // Оновлення сторінки з чистими параметрами
+        });
+    });
+</script>
+
+<!-- Підключення Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">

@@ -19,6 +19,20 @@
         <span asp-validation-for="Description" class="text-danger"></span>
     </div>
 
+    <!-- Вибір або створення категорії -->
+    <div class="mb-3">
+        <label asp-for="Category" class="form-label"></label>
+        <select asp-for="Category" class="form-select" id="categorySelect">
+            <option value="">Виберіть категорію</option>
+            @foreach (var category in ViewBag.Categories)
+            {
+                <option value="@category">@category</option>
+            }
+            <option value="new">+ Додати нову категорію</option>
+        </select>
+        <input type="text" asp-for="Category" id="newCategoryInput" class="form-control mt-2 d-none" placeholder="Введіть нову категорію" />
+    </div>
+
     <div class="mb-3">
         <label asp-for="SeasonStartMonth" class="form-label"></label>
         <select asp-for="SeasonStartMonth" class="form-select" id="seasonStartInput">
@@ -65,19 +79,35 @@
     </div>
 </div>
 
-<!-- JavaScript для очищення форми після успішного додавання -->
+<!-- JavaScript для роботи з категоріями та очищення форми -->
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        var categorySelect = document.getElementById("categorySelect");
+        var newCategoryInput = document.getElementById("newCategoryInput");
+
+        categorySelect.addEventListener("change", function () {
+            if (categorySelect.value === "new") {
+                newCategoryInput.classList.remove("d-none");
+                newCategoryInput.required = true;
+                newCategoryInput.focus();
+            } else {
+                newCategoryInput.classList.add("d-none");
+                newCategoryInput.required = false;
+                newCategoryInput.value = "";
+            }
+        });
+
         var successMessage = "@ViewBag.SuccessMessage";
 
         if (successMessage && successMessage.trim() !== "") {
             var successModal = new bootstrap.Modal(document.getElementById('successModal'));
             successModal.show();
 
-            // Очищення полів форми після закриття модального вікна
             successModal._element.addEventListener('hidden.bs.modal', function () {
                 document.getElementById("nameInput").value = "";
                 document.getElementById("descriptionInput").value = "";
+                document.getElementById("categorySelect").selectedIndex = 0;
+                document.getElementById("newCategoryInput").value = "";
                 document.getElementById("seasonStartInput").selectedIndex = 0;
                 document.getElementById("seasonEndInput").selectedIndex = 0;
                 document.getElementById("imageFile").value = "";
@@ -85,5 +115,3 @@
         }
     });
 </script>
-
-

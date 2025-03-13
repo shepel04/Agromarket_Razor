@@ -15,6 +15,10 @@ namespace Agromarket.Models
         [Required]
         [Display(Name = "Опис товару")]
         public string Description { get; set; }
+        
+        [Required]
+        [Display(Name = "Категорія")]
+        public string Category { get; set; }
 
         [Required]
         [Display(Name = "Початок сезону")]

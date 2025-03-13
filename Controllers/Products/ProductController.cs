@@ -2,13 +2,13 @@
 using Agromarket.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.IO;
 using System.Linq;
+using System.IO;
 using System;
 
-namespace Agromarket.Controllers.Products
+namespace Agromarket.Controllers
 {
-    [Authorize(Roles = "warehousemanager, admin, client")] // Доступ для warehousemanager і admin
+    [Authorize(Roles = "warehousemanager, admin, client")] // Доступ для warehousemanager, admin, client
     public class ProductController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -19,7 +19,7 @@ namespace Agromarket.Controllers.Products
         }
 
         [HttpGet]
-        public IActionResult ProductList(string searchQuery, string sortOrder, string seasonFilter)
+        public IActionResult ProductList(string searchQuery, string sortOrder)
         {
             var products = _context.Products.AsQueryable();
 
@@ -28,19 +28,24 @@ namespace Agromarket.Controllers.Products
                 products = products.Where(p => p.Name.Contains(searchQuery));
             }
 
-            var productList = products.AsEnumerable();
-
-            productList = sortOrder switch
+            products = sortOrder switch
             {
-                "name_desc" => productList.OrderByDescending(p => p.Name),
-                "season" => productList.OrderByDescending(p => p.IsInSeason()), 
-                _ => productList.OrderBy(p => p.Name),
+                "name_desc" => products.OrderByDescending(p => p.Name),
+                "season" => products.AsEnumerable().OrderByDescending(p => p.IsInSeason()).AsQueryable(),
+                _ => products.OrderBy(p => p.Name),
             };
 
-            return View(productList.ToList());
+            return View(products.ToList());
         }
 
-        
+        [HttpGet]
+        public IActionResult AddProduct()
+        {
+            ViewBag.Months = GetMonths();
+            ViewBag.Categories = GetCategories();
+            return View();
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult AddProduct(Product model, IFormFile? imageFile)
@@ -56,23 +61,27 @@ namespace Agromarket.Controllers.Products
                     }
                 }
 
+                // Якщо обрано "Додати нову категорію"
+                if (!string.IsNullOrEmpty(model.Category) && model.Category == "new")
+                {
+                    model.Category = Request.Form["newCategory"].ToString();
+                }
+
                 _context.Products.Add(model);
                 _context.SaveChanges();
 
                 ViewBag.SuccessMessage = "Товар успішно додано!";
-                ViewBag.Months = GetMonths(); 
+                ViewBag.Months = GetMonths();
+                ViewBag.Categories = GetCategories();
+
                 return View();
             }
 
+            // Передаємо список місяців і категорій, якщо валідація не пройшла
             ViewBag.Months = GetMonths();
+            ViewBag.Categories = GetCategories();
+
             return View(model);
-        }
-        
-        [HttpGet]
-        public IActionResult AddProduct()
-        {
-            ViewBag.Months = GetMonths();
-            return View();
         }
 
         [HttpGet]
@@ -82,6 +91,7 @@ namespace Agromarket.Controllers.Products
             if (product == null) return NotFound();
 
             ViewBag.Months = GetMonths();
+            ViewBag.Categories = GetCategories();
             return View(product);
         }
 
@@ -96,6 +106,7 @@ namespace Agromarket.Controllers.Products
             product.Description = model.Description;
             product.SeasonStartMonth = model.SeasonStartMonth;
             product.SeasonEndMonth = model.SeasonEndMonth;
+            product.Category = model.Category;
 
             if (imageFile != null && imageFile.Length > 0)
             {
@@ -120,7 +131,7 @@ namespace Agromarket.Controllers.Products
             _context.SaveChanges();
             return RedirectToAction("ProductList");
         }
-        
+
         public IActionResult Details(int id)
         {
             var product = _context.Products.FirstOrDefault(p => p.Id == id);
@@ -131,37 +142,49 @@ namespace Agromarket.Controllers.Products
 
             return View(product);
         }
-        
-        public IActionResult Catalog(string search, decimal? minPrice, decimal? maxPrice, bool inStock = false)
+
+        public IActionResult Catalog(string search, decimal? minPrice, decimal? maxPrice, bool inStock = false, string category = null)
         {
             var products = _context.Products.AsQueryable();
 
-            // Фільтр по назві
+            products = products.Where(p => p.StockQuantity > 0);
+
             if (!string.IsNullOrEmpty(search))
             {
                 products = products.Where(p => p.Name.Contains(search));
             }
 
-            // Фільтр по мінімальній ціні
+            if (!string.IsNullOrEmpty(category))
+            {
+                products = products.Where(p => p.Category == category);
+            }
+
             if (minPrice.HasValue)
             {
                 products = products.Where(p => p.SellingPrice >= minPrice.Value);
             }
 
-            // Фільтр по максимальній ціні
             if (maxPrice.HasValue)
             {
                 products = products.Where(p => p.SellingPrice <= maxPrice.Value);
             }
 
-            // Фільтр тільки в наявності
             if (inStock)
             {
                 products = products.Where(p => p.StockQuantity > 0);
             }
 
+            ViewBag.Categories = _context.Products
+                .Select(p => p.Category)
+                .Where(c => !string.IsNullOrEmpty(c))
+                .Distinct()
+                .ToList();
+
             return View(products.ToList());
         }
+
+
+
 
         private List<string> GetMonths()
         {
@@ -171,5 +194,35 @@ namespace Agromarket.Controllers.Products
                 "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"
             };
         }
+        
+        private List<string> GetCategories()
+        {
+            var defaultCategories = new List<string>
+            {
+                "Фрукти",
+                "Овочі",
+                "Ягоди",
+                "Зелень",
+                "Горіхи",
+                "Зернові та бобові",
+                "Молочні продукти",
+                "М'ясо та птиця",
+                "Риба та морепродукти",
+                "Напої",
+                "Мед та продукти бджільництва",
+                "Бакалія",
+                "Випічка та хліб",
+                "Яйця"
+            };
+
+            var existingCategories = _context.Products
+                .Select(p => p.Category)
+                .Where(c => !string.IsNullOrEmpty(c))
+                .Distinct()
+                .ToList();
+
+            return defaultCategories.Union(existingCategories).ToList();
+        }
+
     }
 }
