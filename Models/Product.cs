@@ -19,6 +19,7 @@ namespace Agromarket.Models
         [Required]
         [Display(Name = "Категорія")]
         public string Category { get; set; }
+        
 
         [Required]
         [Display(Name = "Початок сезону")]
@@ -72,12 +73,12 @@ namespace Agromarket.Models
 
             int startIdx = Array.IndexOf(months, SeasonStartMonth);
             int endIdx = Array.IndexOf(months, SeasonEndMonth);
-            int currentIdx = DateTime.UtcNow.Month;
+            int currentIdx = DateTime.UtcNow.Month - 1;
 
             if (startIdx == -1 || endIdx == -1 || currentIdx == -1)
                 return false; 
 
-            if (startIdx <= endIdx)
+            if (startIdx <= endIdx) 
             {
                 return currentIdx >= startIdx && currentIdx <= endIdx;
             }

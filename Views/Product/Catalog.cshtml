@@ -166,10 +166,13 @@
 
         resetButton.addEventListener('click', function () {
             filterForm.reset();
-            filterForm.submit(); // Оновлення сторінки з чистими параметрами
+
+            var url = window.location.origin + window.location.pathname;
+            window.location.href = url; 
         });
     });
 </script>
+
 
 <!-- Підключення Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">

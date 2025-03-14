@@ -34,34 +34,73 @@
     @foreach (var product in Model)
     {
         bool isActive = product.IsInSeason();
-        string rowClass = isActive ? "" : "text-muted";
-        string opacityStyle = isActive ? "" : "opacity: 0.6;";
+        bool isInWarehouse = product.StockQuantity > 0; // Перевірка чи є товар у складському обліку
+        string rowClass = isActive ? "" : "inactive-product"; // Виділення неактуальних сірим
+        string grayscaleFilter = isActive ? "" : "filter: grayscale(100%);"; // Чорно-білий фільтр для фото
 
-        <tr class="@rowClass" style="@opacityStyle">
+        <tr class="@rowClass">
             <td>
-                @if (product.ImageData != null)
-                {
-                    var base64 = Convert.ToBase64String(product.ImageData);
-                    var imgSrc = $"data:image/png;base64,{base64}";
-                    <img src="@imgSrc" alt="Фото товару" style="width: 100px; height: auto; @opacityStyle" />
-                }
-                else
-                {
-                    <span>Немає фото</span>
-                }
+                <div class="product-image-container">
+                    @if (product.ImageData != null)
+                    {
+                        var base64 = Convert.ToBase64String(product.ImageData);
+                        var imgSrc = $"data:image/png;base64,{base64}";
+                        <img src="@imgSrc" alt="Фото товару" class="product-image" style="@grayscaleFilter" />
+                    }
+                    else
+                    {
+                        <span>Немає фото</span>
+                    }
+                </div>
             </td>
             <td>@product.Name</td>
             <td>@product.Description</td>
             <td>@product.SeasonStartMonth - @product.SeasonEndMonth</td>
             <td>
-                <a asp-action="EditProduct" asp-route-id="@product.Id" class="btn btn-warning btn-sm">Редагувати</a>
+                <!-- Кнопка редагування товару -->
+                <a asp-action="EditProduct" asp-route-id="@product.Id" class="btn btn-warning btn-sm">✏️ Редагувати</a>
 
-                <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Ви впевнені, що хочете видалити цей товар?');">
-                    <input type="hidden" name="id" value="@product.Id" />
-                    <button type="submit" class="btn btn-danger btn-sm">Видалити</button>
-                </form>
+                <!-- Перевірка: якщо товар є у складському обліку, не можна видаляти -->
+                @if (!isInWarehouse)
+                {
+                    <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Ви впевнені, що хочете видалити цей товар?');">
+                        <input type="hidden" name="id" value="@product.Id" />
+                        <button type="submit" class="btn btn-danger btn-sm">🗑️ Видалити</button>
+                    </form>
+                }
+                else
+                {
+                    <button class="btn btn-danger btn-sm" disabled>❌ Видалення заблоковано</button>
+                }
+
+                <!-- Кнопка "Створити надходження" доступна лише для актуальних товарів -->
+                @if (isActive)
+                {
+                    <a href="@Url.Action("Warehouse", "Warehouse", new { selectedProductId = product.Id })"
+                       class="btn btn-success btn-sm create-receipt">
+                        📦 Створити надходження
+                    </a>
+                }
             </td>
         </tr>
     }
     </tbody>
 </table>
+
+<!-- CSS для сірого виділення неактуальних товарів -->
+<style>
+    .inactive-product {
+        color: gray !important;
+        opacity: 0.6;
+    }
+
+    .product-image-container {
+        display: inline-block;
+    }
+
+    .product-image {
+        width: 100px;
+        height: auto;
+        display: block;
+    }
+</style>

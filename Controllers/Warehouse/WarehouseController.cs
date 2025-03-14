@@ -2,8 +2,9 @@
 using Agromarket.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Linq;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Agromarket.Controllers.Warehouse
 {
@@ -18,21 +19,34 @@ namespace Agromarket.Controllers.Warehouse
         }
 
         [HttpGet]
-        public IActionResult Warehouse()
+        public IActionResult Warehouse(int? selectedProductId)
         {
             var products = _context.Products.Where(p => p.StockQuantity > 0).ToList();
-            ViewBag.Products = _context.Products.ToList();
+
+            ViewBag.Products = _context.Products
+                .AsEnumerable()
+                .Where(p => p.IsInSeason())
+                .ToList();
+
+            ViewBag.SelectedProductId = selectedProductId; 
             return View(products);
         }
 
+
+
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult ReceiveMultipleStock(List<StockItem> stockItems)
         {
             foreach (var item in stockItems)
             {
-                var product = _context.Products.Find(item.ProductId);
-                if (product == null) continue;
+                var product = _context.Products.FirstOrDefault(p => p.Id == item.ProductId);
+                if (product == null || !product.IsInSeason())
+                {
+                    continue;
+                }
 
+                // Додаємо товар у складський облік
                 product.StockQuantity += item.Quantity;
                 product.PurchasePrice = item.PurchasePrice;
                 product.SellingPrice = item.SellingPrice;
@@ -57,6 +71,7 @@ namespace Agromarket.Controllers.Warehouse
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult DeductStock(int productId, int quantity)
         {
             var product = _context.Products.Find(productId);
@@ -92,16 +107,15 @@ namespace Agromarket.Controllers.Warehouse
         {
             var history = _context.StockTransactions
                 .OrderByDescending(t => t.TransactionDate)
-                .AsQueryable(); 
+                .AsQueryable();
 
             if (!string.IsNullOrEmpty(filterType))
             {
                 history = history.Where(t => t.TransactionType == filterType);
             }
 
-            ViewBag.FilterType = filterType; 
+            ViewBag.FilterType = filterType;
             return View(history.ToList());
         }
-
     }
 }
