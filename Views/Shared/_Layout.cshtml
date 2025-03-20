@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/Agromarket.styles.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
 </head>
 <body>
 <header>
@@ -21,54 +22,64 @@
             <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                 <ul class="navbar-nav flex-grow-1">
                     <li class="nav-item">
-                        <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Головна</a>
-                    </li>
-                    
-                    <li class="nav-item">
-                        <a class="nav-link text-dark" asp-controller="Product" asp-action="Catalog">Каталог товарів</a>
+                        <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">
+                            <i class="fas fa-home"></i> Головна
+                        </a>
                     </li>
 
+                    <li class="nav-item">
+                        <a class="nav-link text-dark" asp-controller="Product" asp-action="Catalog">
+                            <i class="fas fa-th"></i> Каталог товарів
+                        </a>
+                    </li>
 
                     @if (User.IsInRole("admin"))
                     {
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Admin" asp-action="Index">Адмін Панель</a>
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Admin" asp-action="Index">
+                                <i class="fas fa-cogs"></i> Адмін Панель
+                            </a>
                         </li>
                     }
 
                     @if (User.IsInRole("warehousemanager") || User.IsInRole("admin"))
                     {
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Product" asp-action="AddProduct">Додати товар</a>
+                            <a class="nav-link text-dark" asp-controller="Product" asp-action="ProductList">
+                                <i class="fas fa-list"></i> Список товарів
+                            </a>
                         </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Product" asp-action="ProductList">Список товарів</a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Warehouse" asp-action="Warehouse">Складський облік</a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Warehouse" asp-action="StockHistory">Історія операцій</a>
-                        </li>   
-                        
-                        @*<li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>*@
 
-                    }
-
-                @if (User.IsInRole("client") || User.IsInRole("admin"))
-                    {
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Cart" asp-action="Index">
-                                🛒 Кошик
+                            <a class="nav-link text-dark" asp-controller="Warehouse" asp-action="Warehouse">
+                                <i class="fas fa-warehouse"></i> Складський облік
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Warehouse" asp-action="StockHistory">
+                                <i class="fas fa-history"></i> Історія операцій
                             </a>
                         </li>
                     }
-                    
+
+                    @if (User.IsInRole("admin") || User.IsInRole("clientmanager"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Order" asp-action="OrderList">
+                                <i class="fas fa-box"></i> Замовлення
+                            </a>
+                        </li>
+                    }
+
+                    @if (User.IsInRole("client") || User.IsInRole("admin"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Cart" asp-action="Index">
+                                <i class="fas fa-shopping-cart"></i> Кошик
+                            </a>
+                        </li>
+                    }
                 </ul>
                 <partial name="_LoginPartial"/>
             </div>

@@ -6,10 +6,10 @@
 
 <h2>Складський облік</h2>
 
-<!-- Кнопка "Створити нове надходження" -->
-<button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#newReceiptModal">Створити нове надходження</button>
+<!-- 🔹 Головна кнопка "Додати товар у складський облік" -->
+<button class="btn btn-primary mb-3" id="openAddStockModal">➕ Додати товар на склад</button>
 
-<!-- Таблиця товарів -->
+<!-- 🔹 Таблиця товарів -->
 <table class="table table-bordered table-responsive">
     <thead class="table-light">
     <tr>
@@ -52,10 +52,11 @@
                 </td>
                 <td>
                     <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deductModal-@product.Id">Списати</button>
+                    <button class="btn btn-success btn-sm add-to-stock" data-product-id="@product.Id" data-product-name="@product.Name">✙ Додати на склад</button>
                 </td>
             </tr>
 
-            <!-- Модальне вікно списання товару -->
+            <!-- 🔹 Модальне вікно списання товару -->
             <div class="modal fade" id="deductModal-@product.Id" tabindex="-1" aria-labelledby="deductModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -86,8 +87,80 @@
     </tbody>
 </table>
 
-<!-- JavaScript для кнопки "Списати все" -->
+<!-- 🔹 Модальне вікно "Додати товар у складський облік" -->
+<div class="modal fade" id="newReceiptModal" tabindex="-1" aria-labelledby="newReceiptModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Додати товар у складський облік</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="stockForm" asp-controller="Warehouse" asp-action="ReceiveMultipleStock" method="post">
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                            <tr>
+                                <th class="text-center">Товар</th>
+                                <th class="text-center">Кількість</th>
+                                <th class="text-center">Одиниця</th>
+                                <th class="text-center">Ціна закупівлі</th>
+                                <th class="text-center">Ціна продажу</th>
+                                <th class="text-center">Строк придатності (тижні)</th>
+                                <th class="text-center"></th>
+                            </tr>
+                            </thead>
+                            <tbody id="stockTableBody">
+                            <tr class="stock-item">
+                                <td>
+                                    <select name="stockItems[0].ProductId" class="form-select">
+                                        @foreach (var product in ViewBag.Products)
+                                        {
+                                            <option value="@product.Id">@product.Name</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td><input type="number" name="stockItems[0].Quantity" class="form-control" min="1" required /></td>
+                                <td>
+                                    <select name="stockItems[0].UnitOfMeasurement" class="form-select">
+                                        <option value="кг" selected>кг</option>
+                                        <option value="шт">шт</option>
+                                    </select>
+                                </td>
+                                <td><input type="number" step="0.01" name="stockItems[0].PurchasePrice" class="form-control" min="0" required /></td>
+                                <td><input type="number" step="0.01" name="stockItems[0].SellingPrice" class="form-control" min="0" required /></td>
+                                <td><input type="number" name="stockItems[0].ShelfLifeWeeks" class="form-control" min="1" required /></td>
+                                <td><button type="button" class="btn btn-danger remove-item">🗑</button></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="addStockItem">Додати товар</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Зберегти</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 🔹 JavaScript -->
 <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let stockModal = new bootstrap.Modal(document.getElementById('newReceiptModal'));
+
+        document.getElementById("openAddStockModal").addEventListener("click", function () {
+            stockModal.show();
+        });
+
+        document.querySelectorAll(".add-to-stock").forEach(button => {
+            button.addEventListener("click", function () {
+                stockModal.show();
+            });
+        });
+    });
+
     function setMaxQuantity(productId, maxQuantity) {
         document.getElementById("deductQuantity-" + productId).value = maxQuantity;
     }

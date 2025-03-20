@@ -24,13 +24,16 @@ namespace Agromarket.Controllers.Warehouse
             var products = _context.Products.Where(p => p.StockQuantity > 0).ToList();
 
             ViewBag.Products = _context.Products
-                .AsEnumerable()
-                .Where(p => p.IsInSeason())
+                .AsEnumerable() 
+                .Where(p => p.IsInSeason()) 
                 .ToList();
 
-            ViewBag.SelectedProductId = selectedProductId; 
+            ViewBag.SelectedProductId = selectedProductId;
+
             return View(products);
         }
+
+
 
 
 

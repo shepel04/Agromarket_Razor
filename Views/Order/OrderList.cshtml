@@ -1,0 +1,123 @@
+﻿@model IEnumerable<Agromarket.Models.Order>
+@{
+    ViewData["Title"] = "Список замовлень";
+}
+
+<h2>Список замовлень</h2>
+
+<!-- Форма фільтрації за статусом -->
+<form asp-action="OrderList" method="get" class="mb-3 d-flex">
+    <label class="me-2">Фільтр за статусом:</label>
+    <select name="statusFilter" class="form-select me-2" onchange="this.form.submit()">
+        <option value="">Всі</option>
+        <option value="Виконується" selected="@(ViewBag.StatusFilter == "Виконується" ? "selected" : null)">Виконується</option>
+        <option value="Виконано" selected="@(ViewBag.StatusFilter == "Виконано" ? "selected" : null)">Виконано</option>
+        <option value="Скасовано" selected="@(ViewBag.StatusFilter == "Скасовано" ? "selected" : null)">Скасовано</option>
+    </select>
+</form>
+
+@if (TempData["StockError"] != null)
+{
+    <div class="alert alert-danger">
+        @Html.Raw(TempData["StockError"])
+    </div>
+}
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>№</th>
+            <th>Клієнт</th>
+            <th>Email</th>
+            <th>Телефон</th>
+            <th>Сума</th>
+            <th>Дата</th>
+            <th>Статус</th>
+            <th>Дії</th>
+        </tr>
+    </thead>
+    <tbody id="order-table-body">
+        @foreach (var order in Model)
+        {
+            <tr id="order-@order.Id">
+                <td>@order.Id</td>
+                <td>@order.CustomerName</td>
+                <td>@order.CustomerEmail</td>
+                <td>@order.CustomerPhone</td>
+                <td>@order.TotalAmount.ToString("0")₴</td>
+                <td>@order.OrderDate.ToShortDateString()</td>
+                <td>
+                    <form asp-action="UpdateStatus" method="post" style="display:inline;">
+                        <input type="hidden" name="id" value="@order.Id" />
+                        <select name="newStatus" class="form-select form-select-sm d-inline-block" style="width: auto;">
+                            <option value="Виконується" selected="@((order.Status == OrderStatus.Виконується) ? "selected" : null)">Виконується</option>
+                            <option value="Виконано" selected="@((order.Status == OrderStatus.Виконано) ? "selected" : null)">Виконано</option>
+                            <option value="Скасовано" selected="@((order.Status == OrderStatus.Скасовано) ? "selected" : null)">Скасовано</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm">Змінити</button>
+                    </form>
+                </td>
+                <td>
+                    <a asp-action="EditOrder" asp-route-id="@order.Id" class="btn btn-warning btn-sm">✏️ Редагувати</a>
+                    <button class="btn btn-info btn-sm" onclick="toggleOrderDetails(@order.Id)">📜 Деталі</button>
+                    <button onclick="deleteOrder(@order.Id)" class="btn btn-danger btn-sm">🗑️ Видалити</button>
+                </td>
+            </tr>
+            <tr id="order-details-@order.Id" class="d-none">
+                <td colspan="8">
+                    <div id="details-content-@order.Id" class="border p-3 rounded bg-light">
+                        <p><strong>Завантаження...</strong></p>
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<script>
+    async function toggleOrderDetails(orderId) {
+        let detailsRow = document.getElementById(`order-details-${orderId}`);
+        let detailsContent = document.getElementById(`details-content-${orderId}`);
+
+        if (!detailsRow.classList.contains("d-none")) {
+            detailsRow.classList.add("d-none"); // Закриваємо, якщо вже відкрито
+            return;
+        }
+
+        detailsRow.classList.remove("d-none"); // Показуємо блок деталей
+
+        try {
+            let response = await fetch(`/Order/GetOrderDetails/${orderId}`);
+            if (response.ok) {
+                let data = await response.text();
+                detailsContent.innerHTML = data;
+            } else {
+                detailsContent.innerHTML = "<p class='text-danger'>Помилка завантаження деталей.</p>";
+            }
+        } catch (error) {
+            console.error("Помилка:", error);
+            detailsContent.innerHTML = "<p class='text-danger'>Не вдалося отримати дані.</p>";
+        }
+    }
+
+    async function deleteOrder(orderId) {
+        if (!confirm("Ви впевнені, що хочете видалити це замовлення?")) return;
+
+        try {
+            let response = await fetch(`/Order/DeleteOrder/${orderId}`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            });
+
+            if (response.ok) {
+                document.getElementById(`order-${orderId}`).remove();
+            } else {
+                alert("Не вдалося видалити замовлення.");
+            }
+        } catch (error) {
+            console.error("Помилка при видаленні замовлення:", error);
+        }
+    }
+</script>

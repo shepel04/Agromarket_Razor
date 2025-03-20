@@ -6,7 +6,25 @@
 
 <h2>Редагувати товар</h2>
 
-<form asp-action="EditProduct" method="post" enctype="multipart/form-data">
+<!-- Модальне вікно для помилок -->
+<div id="errorModal" class="modal fade" tabindex="-1" aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="errorModalLabel">Помилка</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+            </div>
+            <div class="modal-body">
+                <ul id="errorList" class="text-danger"></ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="editProductForm" asp-action="EditProduct" method="post" enctype="multipart/form-data">
     <input type="hidden" asp-for="Id" />
 
     <div class="mb-3">
@@ -19,6 +37,18 @@
         <label asp-for="Description" class="form-label"></label>
         <textarea asp-for="Description" class="form-control" required></textarea>
         <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Category" class="form-label">Категорія</label>
+        <select asp-for="Category" class="form-select" required>
+            <option value="">Оберіть категорію</option>
+            @foreach (var category in ViewBag.Categories)
+            {
+                <option value="@category">@category</option>
+            }
+        </select>
+        <span asp-validation-for="Category" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
@@ -49,3 +79,37 @@
     <button type="submit" class="btn btn-primary">Зберегти зміни</button>
     <a asp-action="ProductList" class="btn btn-secondary">Назад</a>
 </form>
+
+@section Scripts {
+    <script>
+        document.getElementById("editProductForm").addEventListener("submit", function (event) {
+            let errors = [];
+            let name = document.getElementById("Name").value.trim();
+            let description = document.getElementById("Description").value.trim();
+            let category = document.getElementById("Category").value;
+            let startMonth = document.getElementById("SeasonStartMonth").value;
+            let endMonth = document.getElementById("SeasonEndMonth").value;
+
+            if (!name) errors.push("Поле 'Назва' є обов'язковим.");
+            if (!description) errors.push("Поле 'Опис' є обов'язковим.");
+            if (!category) errors.push("Оберіть категорію товару.");
+            if (!startMonth) errors.push("Оберіть місяць початку сезону.");
+            if (!endMonth) errors.push("Оберіть місяць закінчення сезону.");
+
+            if (errors.length > 0) {
+                event.preventDefault();
+                let errorList = document.getElementById("errorList");
+                errorList.innerHTML = "";
+                errors.forEach(error => {
+                    let li = document.createElement("li");
+                    li.innerText = error;
+                    errorList.appendChild(li);
+                });
+
+                let errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+                errorModal.show();
+            }
+        });
+    </script>
+}
+    

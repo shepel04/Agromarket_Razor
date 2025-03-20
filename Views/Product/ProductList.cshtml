@@ -12,11 +12,14 @@
     <button type="submit" class="btn btn-primary">🔍</button>
 </form>
 
-<!-- Кнопки сортування -->
-<div class="mb-3">
-    <a asp-action="ProductList" asp-route-sortOrder="name_asc" class="btn btn-secondary">Сортувати А-Я</a>
-    <a asp-action="ProductList" asp-route-sortOrder="name_desc" class="btn btn-secondary">Сортувати Я-А</a>
-    <a asp-action="ProductList" asp-route-sortOrder="season" class="btn btn-secondary">Сортувати за сезонністю</a>
+<!-- Кнопки сортування та додавання товару -->
+<div class="mb-3 d-flex justify-content-between">
+    <div>
+        <a asp-action="ProductList" asp-route-sortOrder="name_asc" class="btn btn-secondary">Сортувати А-Я</a>
+        <a asp-action="ProductList" asp-route-sortOrder="name_desc" class="btn btn-secondary">Сортувати Я-А</a>
+        <a asp-action="ProductList" asp-route-sortOrder="season" class="btn btn-secondary">Сортувати за сезонністю</a>
+    </div>
+    <a asp-action="AddProduct" class="btn btn-success">+ Додати товар</a>
 </div>
 
 <!-- Таблиця товарів -->
@@ -73,11 +76,10 @@
                     <button class="btn btn-danger btn-sm" disabled>❌ Видалення заблоковано</button>
                 }
 
-                <!-- Кнопка "Створити надходження" доступна лише для актуальних товарів -->
                 @if (isActive)
                 {
                     <a href="@Url.Action("Warehouse", "Warehouse", new { selectedProductId = product.Id })"
-                       class="btn btn-success btn-sm create-receipt">
+                       class="btn btn-success btn-sm">
                         📦 Створити надходження
                     </a>
                 }

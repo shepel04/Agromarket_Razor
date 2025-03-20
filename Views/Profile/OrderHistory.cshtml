@@ -27,27 +27,52 @@ else
             <tr>
                 <td>@order.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
                 <td>@order.TotalAmount грн</td>
-                <td><span class="badge bg-success">Виконано</span></td>
                 <td>
-                    <button class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#order-@order.Id">
+                    <span class="badge @(order.Status == OrderStatus.Виконано ? "bg-success" : "bg-warning")">
+                        @order.Status
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="loadOrderDetails(@order.Id)">
                         Деталі
                     </button>
                 </td>
             </tr>
-            <tr id="order-@order.Id" class="collapse">
+            <tr id="order-details-@order.Id" class="d-none">
                 <td colspan="4">
-                    <ul class="list-group">
-                        @foreach (var item in order.OrderItems)
-                        {
-                            <li class="list-group-item d-flex justify-content-between">
-                                <span>@item.ProductName (@item.Quantity @item.Unit)</span>
-                                <span>@(item.Price * item.Quantity) грн</span>
-                            </li>
-                        }
-                    </ul>
+                    <div id="details-content-@order.Id" class="border p-3 rounded bg-light">
+                        <p><strong>Завантаження...</strong></p>
+                    </div>
                 </td>
             </tr>
         }
         </tbody>
     </table>
 }
+
+<script>
+    async function loadOrderDetails(orderId) {
+        let detailsRow = document.getElementById(`order-details-${orderId}`);
+        let detailsContent = document.getElementById(`details-content-${orderId}`);
+
+        if (!detailsRow.classList.contains("d-none")) {
+            detailsRow.classList.add("d-none"); // Закриваємо, якщо вже відкрите
+            return;
+        }
+
+        detailsRow.classList.remove("d-none"); // Показуємо блок деталей
+
+        try {
+            let response = await fetch(`/Order/GetOrderDetails/${orderId}`);
+            if (response.ok) {
+                let data = await response.text();
+                detailsContent.innerHTML = data;
+            } else {
+                detailsContent.innerHTML = "<p class='text-danger'>Помилка завантаження деталей.</p>";
+            }
+        } catch (error) {
+            console.error("Помилка:", error);
+            detailsContent.innerHTML = "<p class='text-danger'>Не вдалося отримати дані.</p>";
+        }
+    }
+</script>

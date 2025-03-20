@@ -4,6 +4,13 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Agromarket.Models
 {
+    public enum OrderStatus
+    {
+        Виконується,
+        Виконано,
+        Скасовано
+    }
+
     public class Order
     {
         public int Id { get; set; }
@@ -29,7 +36,10 @@ namespace Agromarket.Models
         public string DeliveryAddress { get; set; }
 
         [Display(Name = "Дата замовлення")]
-        public DateTime OrderDate { get; set; } = DateTime.UtcNow; // Використовуємо UTC
+        public DateTime OrderDate { get; set; } = DateTime.UtcNow;
+
+        [Display(Name = "Статус замовлення")]
+        public OrderStatus Status { get; set; } = OrderStatus.Виконується; 
 
         public decimal TotalAmount { get; set; }
         public List<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
