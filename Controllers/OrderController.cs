@@ -302,5 +302,55 @@ public async Task<IActionResult> Checkout(Order order)
         {
             HttpContext.Session.Remove("Cart");
         }
+        
+        [HttpPost]
+        public async Task<IActionResult> RepeatOrder(int id)
+        {
+            var order = _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefault(o => o.Id == id);
+
+            if (order == null)
+            {
+                return Json(new { success = false, message = "Замовлення не знайдено." });
+            }
+
+            var productIds = order.OrderItems.Select(i => i.ProductId).ToList();
+            var products = await _context.Products.Where(p => productIds.Contains(p.Id)).ToListAsync();
+
+            List<string> insufficient = new();
+            foreach (var item in order.OrderItems)
+            {
+                var product = products.FirstOrDefault(p => p.Id == item.ProductId);
+                if (product == null || product.StockQuantity < item.Quantity)
+                {
+                    insufficient.Add($"{item.ProductName} (доступно: {product?.StockQuantity ?? 0}, потрібно: {item.Quantity})");
+                }
+            }
+
+            if (insufficient.Any())
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = "Не вдалося повторити замовлення. Недостатньо залишків:<br>" + string.Join("<br>", insufficient)
+                });
+            }
+
+            // Формуємо новий кошик у сесії
+            var cart = order.OrderItems.Select(item => new CartItem
+            {
+                ProductId = item.ProductId,
+                Name = item.ProductName,
+                Quantity = item.Quantity,
+                Price = item.Price,
+                Unit = item.Unit
+            }).ToList();
+
+            HttpContext.Session.SetString("Cart", JsonConvert.SerializeObject(cart));
+
+            return Json(new { success = true });
+        }
+
     }
 }

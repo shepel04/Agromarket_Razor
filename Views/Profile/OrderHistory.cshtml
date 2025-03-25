@@ -37,6 +37,11 @@ else
                         Деталі
                     </button>
                 </td>
+                <td>
+                    <button class="btn btn-secondary btn-sm" onclick="repeatOrder(@order.Id)">🔁 Повторити</button>
+
+                </td>
+                
             </tr>
             <tr id="order-details-@order.Id" class="d-none">
                 <td colspan="4">
@@ -73,6 +78,25 @@ else
         } catch (error) {
             console.error("Помилка:", error);
             detailsContent.innerHTML = "<p class='text-danger'>Не вдалося отримати дані.</p>";
+        }
+    }
+
+    async function repeatOrder(orderId) {
+        try {
+            const response = await fetch(`/Order/RepeatOrder/${orderId}`, {
+                method: "POST"
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                window.location.href = "/Order/Checkout";
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            console.error("Помилка при повторенні замовлення:", error);
+            alert("Сталася помилка при повторенні замовлення.");
         }
     }
 </script>

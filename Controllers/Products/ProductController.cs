@@ -143,45 +143,63 @@ namespace Agromarket.Controllers
             return View(product);
         }
 
-        public IActionResult Catalog(string search, decimal? minPrice, decimal? maxPrice, bool inStock = false, string category = null)
+        public IActionResult Catalog(string search, decimal? minPrice, decimal? maxPrice, bool inStock = false, string category = null, int page = 1, int pageSize = 2)
         {
-            var products = _context.Products.AsQueryable();
+            var productsQuery = _context.Products.AsQueryable();
 
-            products = products.Where(p => p.StockQuantity > 0);
+            // Базова умова — тільки з наявністю
+            productsQuery = productsQuery.Where(p => p.StockQuantity > 0);
 
+            // Фільтри
             if (!string.IsNullOrEmpty(search))
             {
-                products = products.Where(p => p.Name.Contains(search));
+                productsQuery = productsQuery.Where(p => p.Name.Contains(search));
             }
 
             if (!string.IsNullOrEmpty(category))
             {
-                products = products.Where(p => p.Category == category);
+                productsQuery = productsQuery.Where(p => p.Category == category);
             }
 
             if (minPrice.HasValue)
             {
-                products = products.Where(p => p.SellingPrice >= minPrice.Value);
+                productsQuery = productsQuery.Where(p => p.SellingPrice >= minPrice.Value);
             }
 
             if (maxPrice.HasValue)
             {
-                products = products.Where(p => p.SellingPrice <= maxPrice.Value);
+                productsQuery = productsQuery.Where(p => p.SellingPrice <= maxPrice.Value);
             }
 
             if (inStock)
             {
-                products = products.Where(p => p.StockQuantity > 0);
+                productsQuery = productsQuery.Where(p => p.StockQuantity > 0);
             }
 
+            // Загальна кількість товарів після фільтрації
+            var totalItems = productsQuery.Count();
+
+            // Пагінація
+            var products = productsQuery
+                .OrderBy(p => p.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            // Категорії для фільтра
             ViewBag.Categories = _context.Products
+                .Where(p => !string.IsNullOrEmpty(p.Category))
                 .Select(p => p.Category)
-                .Where(c => !string.IsNullOrEmpty(c))
                 .Distinct()
                 .ToList();
 
-            return View(products.ToList());
+            // Інформація для пагінації
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+            return View(products);
         }
+
 
 
 

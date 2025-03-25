@@ -8,7 +8,7 @@
 
 <!-- Кнопка "Показати фільтри" -->
 <button id="showFilters" class="btn btn-dark position-fixed top-50 start-0 translate-middle-y">
-    <i class="bi bi-funnel-fill"></i> <!-- Іконка Bootstrap -->
+    <i class="bi bi-funnel-fill"></i>
 </button>
 
 <!-- Основний контейнер -->
@@ -84,19 +84,84 @@
                 </div>
             }
         </div>
+
+        @if (ViewBag.TotalPages > 1)
+        {
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    @* Попередня сторінка *@
+                    @if (ViewBag.CurrentPage > 1)
+                    {
+                        var prevRoute = new Dictionary<string, string>
+                        {
+                            { "page", (ViewBag.CurrentPage - 1).ToString() }
+                        };
+                        foreach (var key in Context.Request.Query.Keys)
+                        {
+                            if (key != "page" && !string.IsNullOrEmpty(Context.Request.Query[key]))
+                                prevRoute[key] = Context.Request.Query[key].ToString();
+                        }
+
+                        <li class="page-item">
+                            <a class="page-link" asp-action="Catalog" asp-all-route-data="prevRoute" aria-label="Попередня">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    }
+
+                    @* Номери сторінок *@
+                    @for (int i = 1; i <= (int)ViewBag.TotalPages; i++)
+                    {
+                        var routeValues = new Dictionary<string, string>
+                        {
+                            { "page", i.ToString() }
+                        };
+                        foreach (var key in Context.Request.Query.Keys)
+                        {
+                            if (key != "page" && !string.IsNullOrEmpty(Context.Request.Query[key]))
+                                routeValues[key] = Context.Request.Query[key].ToString();
+                        }
+
+                        <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                            <a class="page-link" asp-action="Catalog" asp-all-route-data="routeValues">@i</a>
+                        </li>
+                    }
+
+                    @* Наступна сторінка *@
+                    @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                    {
+                        var nextRoute = new Dictionary<string, string>
+                        {
+                            { "page", (ViewBag.CurrentPage + 1).ToString() }
+                        };
+                        foreach (var key in Context.Request.Query.Keys)
+                        {
+                            if (key != "page" && !string.IsNullOrEmpty(Context.Request.Query[key]))
+                                nextRoute[key] = Context.Request.Query[key].ToString();
+                        }
+
+                        <li class="page-item">
+                            <a class="page-link" asp-action="Catalog" asp-all-route-data="nextRoute" aria-label="Наступна">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+
+
     </div>
 </div>
 
-<!-- Стилі -->
 <style>
     .d-flex {
         position: relative;
     }
 
-    /* Фільтри (сайдбар) */
     .sidebar {
         width: 250px;
-        min-height: 100vh;
+        min-height: 100%;
         transition: transform 0.3s ease-in-out;
         position: absolute;
         left: 0;
@@ -111,7 +176,6 @@
         transform: translateX(-5000%);
     }
 
-    /* Контейнер каталогу */
     #catalogContainer {
         flex-grow: 1;
         padding-left: 270px;
@@ -122,7 +186,6 @@
         padding-left: 20px;
     }
 
-    /* Кнопка для відкриття фільтрів */
     #showFilters {
         display: none;
         z-index: 1001;
@@ -134,15 +197,8 @@
         top: 50%;
         transform: translateY(-50%);
     }
-
-    /* Стилі кнопки "Приховати фільтри" */
-    .btn-outline-dark {
-        font-size: 14px;
-        text-transform: uppercase;
-    }
 </style>
 
-<!-- Скрипт для роботи з фільтрами -->
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         var toggleButton = document.getElementById('toggleFilters');
@@ -166,13 +222,10 @@
 
         resetButton.addEventListener('click', function () {
             filterForm.reset();
-
             var url = window.location.origin + window.location.pathname;
-            window.location.href = url; 
+            window.location.href = url;
         });
     });
 </script>
 
-
-<!-- Підключення Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
