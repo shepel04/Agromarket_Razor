@@ -197,7 +197,6 @@ D:\Razor\Agromarket\obj\Debug\net9.0\compressed\a3ygkwa5zy-2z0ns9nrw6.gz
 D:\Razor\Agromarket\obj\Debug\net9.0\compressed\nezrqnk58p-muycvpuwrr.gz
 D:\Razor\Agromarket\obj\Debug\net9.0\compressed\v0zgfp0y55-87fc7y1x7t.gz
 D:\Razor\Agromarket\obj\Debug\net9.0\compressed\yfc7ypekbg-mlv21k5csn.gz
-D:\Razor\Agromarket\obj\Debug\net9.0\compressed\y4t35tiqan-b9sayid5wm.gz
 D:\Razor\Agromarket\obj\Debug\net9.0\compressed\t6cyqh1qv1-61n19gt1b8.gz
 D:\Razor\Agromarket\obj\Debug\net9.0\compressed\s2yp15k4uh-xtxxf3hu2r.gz
 D:\Razor\Agromarket\obj\Debug\net9.0\compressed\ztc1p8nkga-t1cqhe9u97.gz
@@ -398,3 +397,4 @@ D:\Razor\Agromarket\bin\Debug\net9.0\ru\Microsoft.CodeAnalysis.Scripting.resourc
 D:\Razor\Agromarket\bin\Debug\net9.0\tr\Microsoft.CodeAnalysis.Scripting.resources.dll
 D:\Razor\Agromarket\bin\Debug\net9.0\zh-Hans\Microsoft.CodeAnalysis.Scripting.resources.dll
 D:\Razor\Agromarket\bin\Debug\net9.0\zh-Hant\Microsoft.CodeAnalysis.Scripting.resources.dll
+D:\Razor\Agromarket\obj\Debug\net9.0\compressed\y4t35tiqan-zaha7nvoip.gz

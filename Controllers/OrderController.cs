@@ -15,109 +15,202 @@ namespace Agromarket.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
 
-        public OrderController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
+        public OrderController(ApplicationDbContext context, UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager)
         {
             _context = context;
             _userManager = userManager;
+            _roleManager = roleManager;
         }
 
         [HttpGet]
         public async Task<IActionResult> Checkout()
         {
             var cart = GetCart();
-            if (!cart.Any())
-            {
-                return RedirectToAction("Index", "Cart");
-            }
+            if (!cart.Any()) return RedirectToAction("Index", "Cart");
 
             var user = await _userManager.GetUserAsync(User);
-            var userEmail = user?.Email ?? "";
-
-            var order = new Order
-            {
-                CustomerEmail = userEmail
-            };
+            var order = new Order { CustomerEmail = user?.Email ?? "" };
 
             ViewBag.CartItems = cart;
-            ViewBag.TotalAmount = cart.Sum(item => item.Price * item.Quantity);
-
-            return View(order); // Переконайтеся, що це повертає Views/Order/Checkout.cshtml
+            ViewBag.TotalAmount = cart.Sum(i => i.Price * i.Quantity);
+            return View(order);
         }
-
 
         [HttpPost]
-public async Task<IActionResult> Checkout(Order order)
-{
-    var cart = GetCart();
-    if (!cart.Any())
-    {
-        return RedirectToAction("Index", "Cart");
-    }
-
-    if (!ModelState.IsValid)
-    {
-        ViewBag.CartItems = cart;
-        ViewBag.TotalAmount = cart.Sum(item => item.Price * item.Quantity);
-        return View(order);
-    }
-
-    // Отримуємо список товарів з бази даних для перевірки залишків
-    var productIds = cart.Select(c => c.ProductId).ToList();
-    var products = await _context.Products.Where(p => productIds.Contains(p.Id)).ToListAsync();
-
-    List<string> insufficientStockItems = new List<string>();
-
-    foreach (var item in cart)
-    {
-        var product = products.FirstOrDefault(p => p.Id == item.ProductId);
-        if (product == null || product.StockQuantity < item.Quantity)
+        public async Task<IActionResult> Checkout(Order order)
         {
-            insufficientStockItems.Add($"{item.Name} (доступно: {product?.StockQuantity ?? 0}, потрібно: {item.Quantity})");
+            var cart = GetCart();
+            if (!cart.Any()) return RedirectToAction("Index", "Cart");
+
+            if (!ModelState.IsValid)
+            {
+                ViewBag.CartItems = cart;
+                ViewBag.TotalAmount = cart.Sum(i => i.Price * i.Quantity);
+                return View(order);
+            }
+
+            var entryIds = cart.Select(c => c.EntryId).ToList();
+            var entries = await _context.WarehouseEntries
+                .Include(e => e.Product)
+                .Where(e => entryIds.Contains(e.Id))
+                .ToListAsync();
+
+            List<string> insufficient = new();
+            List<WarehouseEntry> depletedEntries = new();
+
+            foreach (var item in cart)
+            {
+                var entry = entries.FirstOrDefault(e => e.Id == item.EntryId);
+                if (entry == null || (!entry.IsAvailableForPreorder && entry.Quantity < item.Quantity))
+                {
+                    insufficient.Add($"{item.Name} (доступно: {entry?.Quantity ?? 0}, потрібно: {item.Quantity})");
+                }
+            }
+
+            if (insufficient.Any())
+            {
+                TempData["StockError"] = "Недостатньо залишків:<br>" + string.Join("<br>", insufficient);
+                return RedirectToAction("Checkout");
+            }
+
+            foreach (var item in cart)
+            {
+                var entry = entries.First(e => e.Id == item.EntryId);
+            
+                if (entry.Quantity >= item.Quantity)
+                {
+                    // є достатньо товару — зменшуємо
+                    entry.Quantity -= item.Quantity;
+                    _context.WarehouseEntries.Update(entry);
+            
+                    if (entry.Quantity == 0)
+                    {
+                        depletedEntries.Add(entry);
+                    }
+                }
+                else if (entry.IsAvailableForPreorder && entry.Quantity == 0)
+                {
+                    // Заглушка: логіка для передзамовлення, коли товару немає
+                    // TODO: Реалізувати створення Preorder
+                    Console.WriteLine($"Передзамовлення на товар: {entry.Product.Name} (x{item.Quantity})");
+            
+                }
+                else
+                {
+                    throw new Exception($"Недостатньо товару \"{entry.Product.Name}\" на складі.");
+                }
+            }
+
+
+            order.OrderItems = cart.Select(item => new OrderItem
+            {
+                ProductId = item.ProductId,
+                ProductName = item.Name,
+                Price = item.Price,
+                Quantity = item.Quantity,
+                Unit = item.Unit
+            }).ToList();
+
+            order.TotalAmount = cart.Sum(i => i.Price * i.Quantity);
+            order.OrderDate = DateTime.UtcNow;
+            order.Status = OrderStatus.Виконується;
+
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync();
+
+            var managers = new List<IdentityUser>();
+            managers.AddRange(await _userManager.GetUsersInRoleAsync("clientmanager"));
+            managers.AddRange(await _userManager.GetUsersInRoleAsync("admin"));
+
+            foreach (var user in managers.Distinct())
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    UserId = user.Id,
+                    Message = $"Нове замовлення #{order.Id} від {order.CustomerEmail}",
+                    CreatedAt = DateTime.UtcNow,
+                    IsRead = false,
+                    RedirectUrl = Url.Action("EditOrder", "Order", new { id = order.Id })
+                });
+            }
+
+            if (depletedEntries.Any())
+            {
+                var warehouseManagers = await _userManager.GetUsersInRoleAsync("warehousemanager");
+                var admins = await _userManager.GetUsersInRoleAsync("admin");
+                var recipients = warehouseManagers.Concat(admins).Distinct();
+
+                foreach (var user in recipients)
+                {
+                    foreach (var entry in depletedEntries)
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            UserId = user.Id,
+                            Message = $"Товар \"{entry.Product.Name}\" (в партії #{entry.Id}) закінчився.",
+                            CreatedAt = DateTime.UtcNow,
+                            IsRead = false
+                        });
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            ClearCart();
+            return RedirectToAction("OrderSuccess");
         }
-    }
 
-    // Якщо недостатньо товарів – повертаємо помилку і не оформлюємо замовлення
-    if (insufficientStockItems.Any())
-    {
-        TempData["StockError"] = "Недостатньо залишків для наступних товарів:<br>" + string.Join("<br>", insufficientStockItems);
-        return RedirectToAction("Checkout");
-    }
-
-    // Зменшуємо кількість товарів на складі
-    foreach (var item in cart)
-    {
-        var product = products.FirstOrDefault(p => p.Id == item.ProductId);
-        if (product != null)
+        [HttpPost]
+        public async Task<IActionResult> UpdateStatus(int id, OrderStatus newStatus)
         {
-            product.StockQuantity -= item.Quantity; // Віднімаємо кількість товарів на складі
+            var order = await _context.Orders.Include(o => o.OrderItems).FirstOrDefaultAsync(o => o.Id == id);
+            if (order == null) return NotFound();
+
+            if (order.Status != OrderStatus.Скасовано && newStatus == OrderStatus.Скасовано)
+            {
+                foreach (var item in order.OrderItems)
+                {
+                    var entry = await _context.WarehouseEntries.FirstOrDefaultAsync(e => e.ProductId == item.ProductId);
+                    if (entry != null)
+                    {
+                        entry.Quantity += item.Quantity;
+                        _context.WarehouseEntries.Update(entry);
+                    }
+                }
+            }
+
+            order.Status = newStatus;
+            await _context.SaveChangesAsync();
+            return RedirectToAction("OrderList");
         }
-    }
 
-    // Створюємо нове замовлення
-    order.OrderItems = cart.Select(item => new OrderItem
-    {
-        ProductId = item.ProductId,
-        ProductName = item.Name,
-        Price = item.Price,
-        Quantity = item.Quantity,
-        Unit = item.Unit
-    }).ToList();
+        [HttpPost]
+        public async Task<IActionResult> DeleteOrder(int id)
+        {
+            var order = await _context.Orders.Include(o => o.OrderItems).FirstOrDefaultAsync(o => o.Id == id);
+            if (order == null) return NotFound();
 
-    order.TotalAmount = cart.Sum(item => item.Price * item.Quantity);
-    order.OrderDate = DateTime.UtcNow;
-    order.Status = OrderStatus.Виконується;
+            if (order.Status != OrderStatus.Скасовано)
+            {
+                foreach (var item in order.OrderItems)
+                {
+                    var entry = await _context.WarehouseEntries.FirstOrDefaultAsync(e => e.ProductId == item.ProductId);
+                    if (entry != null)
+                    {
+                        entry.Quantity += item.Quantity;
+                        _context.WarehouseEntries.Update(entry);
+                    }
+                }
+            }
 
-    _context.Orders.Add(order);
+            _context.Orders.Remove(order);
+            await _context.SaveChangesAsync();
+            return RedirectToAction("OrderList");
+        }
 
-    await _context.SaveChangesAsync();
-
-    ClearCart();
-
-    return RedirectToAction("OrderSuccess");
-}
-
-        
+        [HttpGet]
         public async Task<IActionResult> OrderList(string statusFilter)
         {
             var orders = _context.Orders
@@ -132,81 +225,9 @@ public async Task<IActionResult> Checkout(Order order)
             ViewBag.StatusFilter = statusFilter;
             return View(await orders.ToListAsync());
         }
-        
+
         [HttpGet]
-        public IActionResult EditOrder(int id)
-        {
-            var order = _context.Orders
-                .Include(o => o.OrderItems)
-                .FirstOrDefault(o => o.Id == id);
-
-            if (order == null)
-            {
-                return NotFound();
-            }
-
-            ViewBag.Products = _context.Products.ToList();
-            return View(order);
-        }
-
-        [HttpPost]
-        public IActionResult EditOrder(Order order)
-        {
-            if (!ModelState.IsValid)
-            {
-                ViewBag.Products = _context.Products.ToList();
-                return View(order);
-            }
-
-            var existingOrder = _context.Orders
-                .Include(o => o.OrderItems)
-                .FirstOrDefault(o => o.Id == order.Id);
-
-            if (existingOrder == null)
-            {
-                return NotFound();
-            }
-
-            // 🔹 Перетворення дати у UTC
-            existingOrder.OrderDate = DateTime.SpecifyKind(order.OrderDate, DateTimeKind.Utc);
-
-            existingOrder.CustomerName = order.CustomerName;
-            existingOrder.CustomerEmail = order.CustomerEmail;
-            existingOrder.CustomerPhone = order.CustomerPhone;
-            existingOrder.DeliveryAddress = order.DeliveryAddress;
-            existingOrder.Status = order.Status;
-
-            existingOrder.OrderItems.Clear();
-
-            if (order.OrderItems != null && order.OrderItems.Any())
-            {
-                foreach (var item in order.OrderItems)
-                {
-                    var product = _context.Products.FirstOrDefault(p => p.Id == item.ProductId);
-                    if (product != null)
-                    {
-                        existingOrder.OrderItems.Add(new OrderItem
-                        {
-                            ProductId = item.ProductId,
-                            ProductName = product.Name,
-                            Price = product.SellingPrice ?? 0,
-                            Quantity = item.Quantity,
-                            Unit = product.Unit
-                        });
-                    }
-                }
-            }
-
-            existingOrder.TotalAmount = existingOrder.OrderItems.Sum(i => i.Quantity * i.Price);
-
-            _context.SaveChanges();
-
-            return RedirectToAction("OrderList");
-        }
-
-
-        [HttpPost]
-        public async Task<IActionResult> UpdateStatus(int id, OrderStatus newStatus)
+        public async Task<IActionResult> GetOrderDetails(int id)
         {
             var order = await _context.Orders
                 .Include(o => o.OrderItems)
@@ -217,140 +238,20 @@ public async Task<IActionResult> Checkout(Order order)
                 return NotFound();
             }
 
-            var productIds = order.OrderItems.Select(i => i.ProductId).ToList();
-            var products = await _context.Products.Where(p => productIds.Contains(p.Id)).ToListAsync();
-
-            // Якщо замовлення скасовується і раніше не було скасованим – повертаємо товари на склад
-            if (newStatus == OrderStatus.Скасовано && order.Status != OrderStatus.Скасовано)
-            {
-                foreach (var item in order.OrderItems)
-                {
-                    var product = products.FirstOrDefault(p => p.Id == item.ProductId);
-                    if (product != null)
-                    {
-                        product.StockQuantity += item.Quantity; // Повертаємо товари на склад
-                    }
-                }
-            }
-            // Якщо замовлення переводиться з "Скасовано" назад у "Виконується" або "Виконано" – знову віднімаємо товари зі складу
-            else if ((newStatus == OrderStatus.Виконується || newStatus == OrderStatus.Виконано) && order.Status == OrderStatus.Скасовано)
-            {
-                List<string> insufficientStockItems = new List<string>();
-
-                foreach (var item in order.OrderItems)
-                {
-                    var product = products.FirstOrDefault(p => p.Id == item.ProductId);
-                    if (product != null)
-                    {
-                        if (product.StockQuantity >= item.Quantity)
-                        {
-                            product.StockQuantity -= item.Quantity; // Віднімаємо товари зі складу
-                        }
-                        else
-                        {
-                            insufficientStockItems.Add($"{item.ProductName} (доступно: {product.StockQuantity}, потрібно: {item.Quantity})");
-                        }
-                    }
-                }
-
-                // Якщо товарів недостатньо – повідомляємо користувача і не змінюємо статус
-                if (insufficientStockItems.Any())
-                {
-                    TempData["StockError"] = "Недостатньо залишків для відновлення замовлення:<br>" + string.Join("<br>", insufficientStockItems);
-                    return RedirectToAction("OrderList");
-                }
-            }
-
-            order.Status = newStatus;
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("OrderList");
+            return View("OrderDetails", order);
         }
 
-        
-        [HttpGet]
-        public IActionResult GetOrderDetails(int id)
-        {
-            var order = _context.Orders
-                .Include(o => o.OrderItems)
-                .FirstOrDefault(o => o.Id == id);
-
-            if (order == null)
-            {
-                return NotFound("Замовлення не знайдено.");
-            }
-
-            return PartialView("_OrderDetails", order);
-        }
-
-
-
-
-
-        public IActionResult OrderSuccess()
-        {
-            return View();
-        }
+        public IActionResult OrderSuccess() => View();
 
         private List<CartItem> GetCart()
         {
             var cart = HttpContext.Session.GetString("Cart");
-            return cart != null ? JsonConvert.DeserializeObject<List<CartItem>>(cart) : new List<CartItem>();
+            return cart != null ? JsonConvert.DeserializeObject<List<CartItem>>(cart) : new();
         }
 
         private void ClearCart()
         {
             HttpContext.Session.Remove("Cart");
         }
-        
-        [HttpPost]
-        public async Task<IActionResult> RepeatOrder(int id)
-        {
-            var order = _context.Orders
-                .Include(o => o.OrderItems)
-                .FirstOrDefault(o => o.Id == id);
-
-            if (order == null)
-            {
-                return Json(new { success = false, message = "Замовлення не знайдено." });
-            }
-
-            var productIds = order.OrderItems.Select(i => i.ProductId).ToList();
-            var products = await _context.Products.Where(p => productIds.Contains(p.Id)).ToListAsync();
-
-            List<string> insufficient = new();
-            foreach (var item in order.OrderItems)
-            {
-                var product = products.FirstOrDefault(p => p.Id == item.ProductId);
-                if (product == null || product.StockQuantity < item.Quantity)
-                {
-                    insufficient.Add($"{item.ProductName} (доступно: {product?.StockQuantity ?? 0}, потрібно: {item.Quantity})");
-                }
-            }
-
-            if (insufficient.Any())
-            {
-                return Json(new
-                {
-                    success = false,
-                    message = "Не вдалося повторити замовлення. Недостатньо залишків:<br>" + string.Join("<br>", insufficient)
-                });
-            }
-
-            // Формуємо новий кошик у сесії
-            var cart = order.OrderItems.Select(item => new CartItem
-            {
-                ProductId = item.ProductId,
-                Name = item.ProductName,
-                Quantity = item.Quantity,
-                Price = item.Price,
-                Unit = item.Unit
-            }).ToList();
-
-            HttpContext.Session.SetString("Cart", JsonConvert.SerializeObject(cart));
-
-            return Json(new { success = true });
-        }
-
     }
 }

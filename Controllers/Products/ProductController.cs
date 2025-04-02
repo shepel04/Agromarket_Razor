@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Linq;
 using System.IO;
 using System;
+using Microsoft.EntityFrameworkCore;
 
 namespace Agromarket.Controllers
 {
@@ -132,76 +133,19 @@ namespace Agromarket.Controllers
             return RedirectToAction("ProductList");
         }
 
-        public IActionResult Details(int id)
+        public IActionResult Details(int entryId)
         {
-            var product = _context.Products.FirstOrDefault(p => p.Id == id);
-            if (product == null)
+            var entry = _context.WarehouseEntries
+                .Include(e => e.Product)
+                .FirstOrDefault(e => e.Id == entryId);
+
+            if (entry == null)
             {
                 return NotFound();
             }
 
-            return View(product);
+            return View(entry);
         }
-
-        public IActionResult Catalog(string search, decimal? minPrice, decimal? maxPrice, bool inStock = false, string category = null, int page = 1, int pageSize = 2)
-        {
-            var productsQuery = _context.Products.AsQueryable();
-
-            // Базова умова — тільки з наявністю
-            productsQuery = productsQuery.Where(p => p.StockQuantity > 0);
-
-            // Фільтри
-            if (!string.IsNullOrEmpty(search))
-            {
-                productsQuery = productsQuery.Where(p => p.Name.Contains(search));
-            }
-
-            if (!string.IsNullOrEmpty(category))
-            {
-                productsQuery = productsQuery.Where(p => p.Category == category);
-            }
-
-            if (minPrice.HasValue)
-            {
-                productsQuery = productsQuery.Where(p => p.SellingPrice >= minPrice.Value);
-            }
-
-            if (maxPrice.HasValue)
-            {
-                productsQuery = productsQuery.Where(p => p.SellingPrice <= maxPrice.Value);
-            }
-
-            if (inStock)
-            {
-                productsQuery = productsQuery.Where(p => p.StockQuantity > 0);
-            }
-
-            // Загальна кількість товарів після фільтрації
-            var totalItems = productsQuery.Count();
-
-            // Пагінація
-            var products = productsQuery
-                .OrderBy(p => p.Name)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            // Категорії для фільтра
-            ViewBag.Categories = _context.Products
-                .Where(p => !string.IsNullOrEmpty(p.Category))
-                .Select(p => p.Category)
-                .Distinct()
-                .ToList();
-
-            // Інформація для пагінації
-            ViewBag.CurrentPage = page;
-            ViewBag.TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
-
-            return View(products);
-        }
-
-
-
 
 
         private List<string> GetMonths()

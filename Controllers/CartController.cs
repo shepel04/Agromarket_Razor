@@ -4,6 +4,7 @@ using Agromarket.Data;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace Agromarket.Controllers
 {
@@ -20,31 +21,46 @@ namespace Agromarket.Controllers
         public IActionResult Index()
         {
             var cart = GetCart();
+
+            // Оновити кількість доступного товару (MaxQuantity)
+            foreach (var item in cart)
+            {
+                var entry = _context.WarehouseEntries.FirstOrDefault(e => e.Id == item.EntryId);
+                item.MaxQuantity = entry?.Quantity ?? 0;
+            }
+
             ViewBag.TotalPrice = cart.Sum(p => p.Price * p.Quantity);
+            SaveCart(cart);
+
             return View(cart);
         }
 
-        public IActionResult AddToCart(int productId, string name, decimal price, string unit, string imageBase64)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AddToCart(int entryId, int quantity = 1)
         {
-            var product = _context.Products.FirstOrDefault(p => p.Id == productId);
-            if (product == null || product.StockQuantity <= 0)
+            var entry = _context.WarehouseEntries
+                .Include(e => e.Product)
+                .FirstOrDefault(e => e.Id == entryId);
+
+            if (entry == null || (entry.Quantity <= 0 && !entry.IsAvailableForPreorder))
             {
-                TempData["StockError"] = $"Товар '{name}' більше недоступний.";
+                TempData["StockError"] = "Товар більше недоступний.";
                 return RedirectToAction("Index");
             }
 
             var cart = GetCart();
-            var existingItem = cart.FirstOrDefault(p => p.ProductId == productId);
+            var existingItem = cart.FirstOrDefault(p => p.EntryId == entryId);
 
             if (existingItem != null)
             {
-                if (existingItem.Quantity < product.StockQuantity)
+                if (existingItem.Quantity + quantity <= entry.Quantity || entry.IsAvailableForPreorder)
                 {
-                    existingItem.Quantity++;
+                    existingItem.Quantity += quantity;
                 }
                 else
                 {
-                    TempData["StockError"] = $"Максимальна кількість '{name}' у кошику: {product.StockQuantity}.";
+                    TempData["StockError"] = $"Максимальна кількість '{entry.Product.Name}' у кошику: {entry.Quantity}.";
                     return RedirectToAction("Index");
                 }
             }
@@ -52,19 +68,21 @@ namespace Agromarket.Controllers
             {
                 cart.Add(new CartItem
                 {
-                    ProductId = productId,
-                    Name = name,
-                    Price = price,
-                    Quantity = 1,
-                    Unit = unit,
-                    ImageBase64 = imageBase64
+                    EntryId = entry.Id,
+                    ProductId = entry.ProductId,
+                    Name = entry.Product.Name,
+                    Price = entry.SellingPrice ?? 0,
+                    Quantity = quantity,
+                    Unit = entry.Product.Unit,
+                    ImageBase64 = entry.Product.ImageData != null ? Convert.ToBase64String(entry.Product.ImageData) : null,
+                    MaxQuantity = entry.Quantity
                 });
             }
 
             SaveCart(cart);
             return RedirectToAction("Index");
         }
-        
+
         public IActionResult ProceedToCheckout()
         {
             var cart = GetCart();
@@ -74,9 +92,8 @@ namespace Agromarket.Controllers
                 return RedirectToAction("Index");
             }
 
-            return RedirectToAction("Checkout", "Order");   
+            return RedirectToAction("Checkout", "Order");
         }
-
 
         [HttpPost]
         public JsonResult CheckStockBeforeCheckout()
@@ -86,14 +103,14 @@ namespace Agromarket.Controllers
 
             foreach (var item in cart)
             {
-                var product = _context.Products.FirstOrDefault(p => p.Id == item.ProductId);
-                if (product == null || product.StockQuantity < item.Quantity)
+                var entry = _context.WarehouseEntries.FirstOrDefault(e => e.Id == item.EntryId);
+                if (entry == null || (!entry.IsAvailableForPreorder && entry.Quantity < item.Quantity))
                 {
                     insufficientStock.Add(new
                     {
                         name = item.Name,
                         requested = item.Quantity,
-                        available = product?.StockQuantity ?? 0
+                        available = entry?.Quantity ?? 0
                     });
                 }
             }
@@ -106,26 +123,27 @@ namespace Agromarket.Controllers
             return Json(new { success = true, redirectUrl = Url.Action("Checkout", "Order") });
         }
 
-
         [HttpPost]
-        public JsonResult UpdateQuantityAjax(int productId, int quantity)
+        public JsonResult UpdateQuantityAjax(int entryId, int quantity)
         {
             var cart = GetCart();
-            var item = cart.FirstOrDefault(p => p.ProductId == productId);
-            var product = _context.Products.FirstOrDefault(p => p.Id == productId);
+            var item = cart.FirstOrDefault(p => p.EntryId == entryId);
+            var entry = _context.WarehouseEntries.FirstOrDefault(e => e.Id == entryId);
 
-            if (item != null && product != null)
+            if (item != null && entry != null)
             {
-                if (quantity > 0 && quantity <= product.StockQuantity)
+                item.MaxQuantity = entry.Quantity;
+
+                if (quantity > 0 && (entry.IsAvailableForPreorder || quantity <= entry.Quantity))
                 {
                     item.Quantity = quantity;
                 }
-                else if (quantity > product.StockQuantity)
+                else if (quantity > entry.Quantity && !entry.IsAvailableForPreorder)
                 {
                     return Json(new
                     {
                         success = false,
-                        message = $"Максимальна кількість '{item.Name}' у кошику: {product.StockQuantity}."
+                        message = $"Максимальна кількість '{item.Name}' у кошику: {entry.Quantity}."
                     });
                 }
                 else
@@ -147,10 +165,10 @@ namespace Agromarket.Controllers
         }
 
         [HttpPost]
-        public JsonResult RemoveFromCartAjax(int productId)
+        public JsonResult RemoveFromCartAjax(int entryId)
         {
             var cart = GetCart();
-            var item = cart.FirstOrDefault(p => p.ProductId == productId);
+            var item = cart.FirstOrDefault(p => p.EntryId == entryId);
 
             if (item != null)
             {
@@ -163,10 +181,10 @@ namespace Agromarket.Controllers
             return Json(new { success = true, totalPrice });
         }
 
-        public IActionResult RemoveFromCart(int productId)
+        public IActionResult RemoveFromCart(int entryId)
         {
             var cart = GetCart();
-            var item = cart.FirstOrDefault(p => p.ProductId == productId);
+            var item = cart.FirstOrDefault(p => p.EntryId == entryId);
             if (item != null)
             {
                 cart.Remove(item);

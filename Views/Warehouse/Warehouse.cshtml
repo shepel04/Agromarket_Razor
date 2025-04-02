@@ -1,141 +1,137 @@
-﻿@model IEnumerable<Agromarket.Models.Product>
+﻿@model IEnumerable<Agromarket.Models.WarehouseEntry>
 
 @{
     ViewData["Title"] = "Складський облік";
 }
 
-<h2>Складський облік</h2>
+<h2 class="mb-4">Складський облік</h2>
 
-<!-- 🔹 Головна кнопка "Додати товар у складський облік" -->
+<!-- Кнопка додавання -->
 <button class="btn btn-primary mb-3" id="openAddStockModal">➕ Додати товар на склад</button>
 
-<!-- 🔹 Таблиця товарів -->
-<table class="table table-bordered table-responsive">
+<table class="table table-bordered table-striped align-middle text-center">
     <thead class="table-light">
     <tr>
         <th>Назва</th>
         <th>Кількість</th>
-        <th>Одиниця</th>
         <th>Ціна закупівлі</th>
         <th>Ціна продажу</th>
-        <th>Залишок строку придатності (тижні)</th>
+        <th>Дата надходження</th>
+        <th>Строк придатності</th>
+        <th>Залишок</th>
         <th>Дії</th>
+        <th>Передзамовлення</th>
+        <th>Управління</th>
     </tr>
     </thead>
     <tbody>
-    @if (!Model.Any())
+    @foreach (var entry in Model)
     {
+        double? daysLeft = entry.ExpirationDate?.Subtract(DateTime.UtcNow).TotalDays;
+        string shelfColor = daysLeft == null ? "text-muted" :
+            daysLeft <= 0 ? "text-danger" :
+            daysLeft <= 14 ? "text-warning" : "text-success";
+
         <tr>
-            <td colspan="7" class="text-center text-muted">Наразі немає товарів у складському обліку.</td>
+            <td>@entry.Product.Name</td>
+            <td>@entry.Quantity</td>
+            <td>@entry.PurchasePrice.ToString("0.00") грн</td>
+            <td>@(entry.SellingPrice?.ToString("0.00") ?? "-") грн</td>
+            <td>@entry.ReceivedDate.ToShortDateString()</td>
+            <td>@entry.ShelfLifeWeeks тиж.</td>
+            <td>
+                    <span class="@shelfColor">
+                        @if (entry.ExpirationDate == null)
+                        {
+                            <text>—</text>
+                        }
+                        else if (daysLeft > 0)
+                        {
+                            <text>@((int)daysLeft) дн.</text>
+                        }
+                        else
+                        {
+                            <text>Закінчився</text>
+                        }
+                    </span>
+            </td>
+
+            <td>
+                @if (entry.Quantity > 0)
+                {
+                    <form asp-controller="Warehouse" asp-action="DeductStock" method="post" class="d-flex gap-1 justify-content-center">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="entryId" value="@entry.Id" />
+                        <input type="number" name="quantity" class="form-control form-control-sm w-50 text-center" min="1" max="@entry.Quantity" required />
+                        <button type="submit" class="btn btn-sm btn-danger">Списати</button>
+                    </form>
+                }
+                else
+                {
+                    <span class="text-muted">—</span>
+                }
+            </td>
+
+            <td class="text-center align-middle">
+                <input type="checkbox"
+                       class="form-check-input preorder-toggle"
+                       data-entry-id="@entry.Id"
+                       @(entry.IsAvailableForPreorder ? "checked" : "") />
+            </td>
+
+            <td>
+                <form asp-controller="Warehouse" asp-action="DeleteEntry" method="post" onsubmit="return confirm('Ви дійсно хочете видалити надходження?')">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="entryId" value="@entry.Id" />
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">🗑️</button>
+                </form>
+            </td>
         </tr>
-    }
-    else
-    {
-        @foreach (var product in Model)
-        {
-            bool isActive = product.StockQuantity > 0;
-            string rowClass = isActive ? "" : "text-muted";
-            string opacityStyle = isActive ? "" : "opacity: 0.6;";
-
-            <tr class="@rowClass" style="@opacityStyle">
-                <td>@product.Name</td>
-                <td>@product.StockQuantity</td>
-                <td>@product.Unit</td>
-                <td>@(product.PurchasePrice.HasValue ? product.PurchasePrice.Value.ToString("0.00") + " грн" : "-")</td>
-                <td>@(product.SellingPrice.HasValue ? product.SellingPrice.Value.ToString("0.00") + " грн" : "-")</td>
-                <td>
-                    @{
-                        int remainingWeeks = product.GetRemainingShelfLife();
-                        string color = remainingWeeks <= 1 ? "text-danger" : (remainingWeeks <= 2 ? "text-warning" : "text-success");
-                    }
-                    <span class="@color fw-bold">@remainingWeeks тиж.</span>
-                </td>
-                <td>
-                    <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deductModal-@product.Id">Списати</button>
-                    <button class="btn btn-success btn-sm add-to-stock" data-product-id="@product.Id" data-product-name="@product.Name">✙ Додати на склад</button>
-                </td>
-            </tr>
-
-            <!-- 🔹 Модальне вікно списання товару -->
-            <div class="modal fade" id="deductModal-@product.Id" tabindex="-1" aria-labelledby="deductModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Списання товару: @product.Name</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <form asp-controller="Warehouse" asp-action="DeductStock" method="post">
-                            <div class="modal-body">
-                                <input type="hidden" name="productId" value="@product.Id" />
-                                <div class="mb-3">
-                                    <label>Кількість для списання</label>
-                                    <div class="input-group">
-                                        <input type="number" id="deductQuantity-@product.Id" name="quantity" class="form-control" min="1" max="@product.StockQuantity" required />
-                                        <button type="button" class="btn btn-outline-danger" onclick="setMaxQuantity(@product.Id, @product.StockQuantity)">Списати все</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="submit" class="btn btn-danger">Списати</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        }
     }
     </tbody>
 </table>
 
-<!-- 🔹 Модальне вікно "Додати товар у складський облік" -->
+
+<!-- Модальне вікно додавання надходження -->
 <div class="modal fade" id="newReceiptModal" tabindex="-1" aria-labelledby="newReceiptModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Додати товар у складський облік</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Додати надходження</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
             </div>
-            <form id="stockForm" asp-controller="Warehouse" asp-action="ReceiveMultipleStock" method="post">
+            <form asp-controller="Warehouse" asp-action="ReceiveMultipleStock" method="post">
                 <div class="modal-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-light">
-                            <tr>
-                                <th class="text-center">Товар</th>
-                                <th class="text-center">Кількість</th>
-                                <th class="text-center">Одиниця</th>
-                                <th class="text-center">Ціна закупівлі</th>
-                                <th class="text-center">Ціна продажу</th>
-                                <th class="text-center">Строк придатності (тижні)</th>
-                                <th class="text-center"></th>
-                            </tr>
-                            </thead>
-                            <tbody id="stockTableBody">
-                            <tr class="stock-item">
-                                <td>
-                                    <select name="stockItems[0].ProductId" class="form-select">
-                                        @foreach (var product in ViewBag.Products)
-                                        {
-                                            <option value="@product.Id">@product.Name</option>
-                                        }
-                                    </select>
-                                </td>
-                                <td><input type="number" name="stockItems[0].Quantity" class="form-control" min="1" required /></td>
-                                <td>
-                                    <select name="stockItems[0].UnitOfMeasurement" class="form-select">
-                                        <option value="кг" selected>кг</option>
-                                        <option value="шт">шт</option>
-                                    </select>
-                                </td>
-                                <td><input type="number" step="0.01" name="stockItems[0].PurchasePrice" class="form-control" min="0" required /></td>
-                                <td><input type="number" step="0.01" name="stockItems[0].SellingPrice" class="form-control" min="0" required /></td>
-                                <td><input type="number" name="stockItems[0].ShelfLifeWeeks" class="form-control" min="1" required /></td>
-                                <td><button type="button" class="btn btn-danger remove-item">🗑</button></td>
-                            </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <button type="button" class="btn btn-secondary" id="addStockItem">Додати товар</button>
+                    <table class="table table-bordered">
+                        <thead class="table-light text-center">
+                        <tr>
+                            <th>Товар</th>
+                            <th>Кількість</th>
+                            <th>Ціна закупівлі</th>
+                            <th>Ціна продажу</th>
+                            <th>Строк (тижні)</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody id="stockTableBody">
+                        <tr class="stock-item">
+                            <td>
+                                <select name="entries[0].ProductId" class="form-select">
+                                    @foreach (var product in ViewBag.Products)
+                                    {
+                                        <option value="@product.Id">@product.Name</option>
+                                    }
+                                </select>
+                            </td>
+                            <td><input type="number" name="entries[0].Quantity" class="form-control" min="1" required /></td>
+                            <td><input type="number" step="0.01" name="entries[0].PurchasePrice" class="form-control" required /></td>
+                            <td><input type="number" step="0.01" name="entries[0].SellingPrice" class="form-control" /></td>
+                            <td><input type="number" name="entries[0].ShelfLifeWeeks" class="form-control" min="1" required /></td>
+                            <td><button type="button" class="btn btn-danger remove-item">🗑</button></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <button type="button" class="btn btn-secondary" id="addStockItem">+ Додати рядок</button>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-success">Зберегти</button>
@@ -145,23 +141,40 @@
     </div>
 </div>
 
-<!-- 🔹 JavaScript -->
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        let stockModal = new bootstrap.Modal(document.getElementById('newReceiptModal'));
+        document.querySelectorAll(".preorder-toggle").forEach(cb => {
+            cb.addEventListener("change", function () {
+                const entryId = this.dataset.entryId;
+                const isAvailable = this.checked;
 
-        document.getElementById("openAddStockModal").addEventListener("click", function () {
-            stockModal.show();
-        });
-
-        document.querySelectorAll(".add-to-stock").forEach(button => {
-            button.addEventListener("click", function () {
-                stockModal.show();
+                fetch("/Warehouse/TogglePreorder", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ entryId, isAvailable })
+                }).then(response => {   
+                    if (!response.ok) {
+                        alert("Помилка оновлення статусу передзамовлення.");
+                        this.checked = !isAvailable;
+                    }
+                }).catch(() => {
+                    alert("Помилка з'єднання.");
+                    this.checked = !isAvailable;
+                });
             });
         });
     });
+        document.addEventListener("DOMContentLoaded", function () {
+        const stockModal = new bootstrap.Modal(document.getElementById('newReceiptModal'));
+        const openBtn = document.getElementById("openAddStockModal");
 
-    function setMaxQuantity(productId, maxQuantity) {
-        document.getElementById("deductQuantity-" + productId).value = maxQuantity;
-    }
+        openBtn?.addEventListener("click", () => {
+        stockModal.show();
+    });
+    });
+
 </script>
+

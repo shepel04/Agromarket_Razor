@@ -9,69 +9,53 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/Agromarket.styles.css" asp-append-version="true"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+    <style>
+        .navbar-nav .nav-link {
+            white-space: nowrap;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .navbar-nav .nav-link:hover {
+            background-color: #f8f9fa;
+            color: #198754 !important;
+        }
+    </style>
 </head>
 <body>
 <header>
-    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
         <div class="container-fluid">
             <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Agromarket</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
                     aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                <ul class="navbar-nav flex-grow-1">
-                    <li class="nav-item">
-                        <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">
-                            <i class="fas fa-home"></i> Головна
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-dark" href="#" id="mainNavDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-bars"></i> Меню
                         </a>
+                        <ul class="dropdown-menu" aria-labelledby="mainNavDropdown">
+                            <li><a class="dropdown-item" asp-controller="Home" asp-action="Index"><i class="fas fa-home"></i> Головна</a></li>
+                            <li><a class="dropdown-item" asp-controller="Warehouse" asp-action="Catalog"><i class="fas fa-th"></i> Каталог товарів</a></li>
+                            @if (User.IsInRole("admin")) {
+                                <li><a class="dropdown-item" asp-controller="Admin" asp-action="Index"><i class="fas fa-cogs"></i> Адмін Панель</a></li>
+                            }
+                            @if (User.IsInRole("warehousemanager") || User.IsInRole("admin")) {
+                                <li><a class="dropdown-item" asp-controller="Product" asp-action="ProductList"><i class="fas fa-list"></i> Список товарів</a></li>
+                                <li><a class="dropdown-item" asp-controller="Warehouse" asp-action="Warehouse"><i class="fas fa-warehouse"></i> Складський облік</a></li>
+                                <li><a class="dropdown-item" asp-controller="Warehouse" asp-action="StockHistory"><i class="fas fa-history"></i> Історія операцій</a></li>
+                            }
+                            @if (User.IsInRole("admin") || User.IsInRole("clientmanager")) {
+                                <li><a class="dropdown-item" asp-controller="Order" asp-action="OrderList"><i class="fas fa-box"></i> Замовлення</a></li>
+                            }
+                        </ul>
                     </li>
+                </ul>
 
-                    <li class="nav-item">
-                        <a class="nav-link text-dark" asp-controller="Product" asp-action="Catalog">
-                            <i class="fas fa-th"></i> Каталог товарів
-                        </a>
-                    </li>
-
-                    @if (User.IsInRole("admin"))
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Admin" asp-action="Index">
-                                <i class="fas fa-cogs"></i> Адмін Панель
-                            </a>
-                        </li>
-                    }
-
-                    @if (User.IsInRole("warehousemanager") || User.IsInRole("admin"))
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Product" asp-action="ProductList">
-                                <i class="fas fa-list"></i> Список товарів
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Warehouse" asp-action="Warehouse">
-                                <i class="fas fa-warehouse"></i> Складський облік
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Warehouse" asp-action="StockHistory">
-                                <i class="fas fa-history"></i> Історія операцій
-                            </a>
-                        </li>
-                    }
-
-                    @if (User.IsInRole("admin") || User.IsInRole("clientmanager"))
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Order" asp-action="OrderList">
-                                <i class="fas fa-box"></i> Замовлення
-                            </a>
-                        </li>
-                    }
-
+                <ul class="navbar-nav ms-auto align-items-center">
                     @if (User.IsInRole("client") || User.IsInRole("admin"))
                     {
                         <li class="nav-item">
@@ -80,8 +64,27 @@
                             </a>
                         </li>
                     }
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <li class="nav-item dropdown">
+                            <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell"></i>
+                                <span id="notificationIndicator" class="position-absolute top-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle d-none"></span>
+                            </a>
+
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" id="notificationList">
+                                <li class="dropdown-item text-muted">Завантаження...</li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="text-center">
+                                    <button class="btn btn-sm btn-outline-secondary" id="markAsReadBtn">Помітити як прочитано</button>
+                                </li>
+                            </ul>
+                        </li>
+                    }
+                    <li class="nav-item">
+                        <partial name="_LoginPartial" />
+                    </li>
                 </ul>
-                <partial name="_LoginPartial"/>
             </div>
         </div>
     </nav>
@@ -100,6 +103,73 @@
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        loadNotifications();
+
+        async function loadNotifications() {
+            try {
+                const res = await fetch('/Notification/GetUserNotifications');
+                const data = await res.json();
+
+                const list = document.getElementById("notificationList");
+                list.innerHTML = "";
+
+                if (data.length === 0) {
+                    list.innerHTML = `<li class="dropdown-item text-muted">Сповіщень немає</li>`;
+                    return;
+                }
+
+                document.getElementById("notificationIndicator").classList.remove("d-none");
+
+                data.forEach(n => {
+                    const li = document.createElement("li");
+                    li.classList.add("dropdown-item");
+                    li.innerText = n.message;
+
+                    if (n.redirectUrl) {
+                        li.style.cursor = "pointer";
+                        li.addEventListener("click", () => {
+                            window.location.href = n.redirectUrl;
+                        });
+                    }
+                    else {
+                        li.innerText = n.message;
+                    }
+                    list.appendChild(li);
+                });
+
+                list.innerHTML += `<li><hr class="dropdown-divider"></li>
+                <li class="text-center">
+                    <button class="btn btn-sm btn-outline-secondary" id="markAsReadBtn">Помітити як прочитано</button>
+                </li>`;
+
+                document.getElementById("markAsReadBtn").addEventListener("click", async () => {
+                    await markNotificationsAsRead();
+                });
+
+            } catch (err) {
+                console.error("Помилка завантаження сповіщень", err);
+            }
+        }
+
+        async function markNotificationsAsRead() {
+            try {
+                const res = await fetch('/Notification/MarkAllAsRead', {
+                    method: 'POST'
+                });
+
+                if (res.ok) {
+                    document.getElementById("notificationList").innerHTML = `<li class="dropdown-item text-muted">Сповіщень немає</li>`;
+                    document.getElementById("notificationIndicator").classList.add("d-none");
+                }
+            } catch (err) {
+                console.error("Помилка при оновленні сповіщень", err);
+            }
+        }
+    });
+
+</script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

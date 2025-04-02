@@ -1,9 +1,8 @@
-﻿@model IEnumerable<Agromarket.Models.Product>
+﻿@model IEnumerable<Agromarket.Models.WarehouseEntry>
 
 @{
     ViewData["Title"] = "Головна";
 
-    // Словник іконок для категорій
     var categoryIcons = new Dictionary<string, string>
     {
         { "Фрукти", "🍎" },
@@ -31,21 +30,22 @@
         <div class="carousel-inner">
             @for (int i = 0; i < Model.Count(); i++)
             {
-                var product = Model.ElementAt(i);
+                var entry = Model.ElementAt(i);
+                var product = entry.Product;
                 var base64 = product.ImageData != null ? Convert.ToBase64String(product.ImageData) : null;
                 var imgSrc = base64 != null ? $"data:image/png;base64,{base64}" : "/img/no-image.png";
 
                 <div class="carousel-item @(i == 0 ? "active" : "")">
                     <div class="card text-center">
-                        <a href="@Url.Action("Details", "Product", new { id = product.Id })">
-                            <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name">
+                        <a href="@Url.Action("Details", "Product", new { entryId = entry.Id })">
+                            <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name" />
                         </a>
                         <div class="card-body">
                             <h5 class="card-title">@product.Name</h5>
                             <p class="card-text">@product.Description</p>
-                            <p class="card-text"><strong>Ціна:</strong> @(product.SellingPrice.HasValue ? product.SellingPrice.Value.ToString("0.00") + " грн" : "Не вказано")</p>
-                            <p class="text-muted">В наявності: @product.StockQuantity @product.Unit</p>
-                            <a href="@Url.Action("Details", "Product", new { id = product.Id })" class="btn btn-primary">Детальніше</a>
+                            <p class="card-text"><strong>Ціна:</strong> @(entry.SellingPrice?.ToString("0.00") ?? "Не вказано") грн</p>
+                            <p class="text-muted">В наявності: @(entry.Quantity > 0 ? $"{entry.Quantity} {product.Unit}" : "Під замовлення")</p>
+                            <a href="@Url.Action("Details", "Product", new { entryId = entry.Id })" class="btn btn-primary">Детальніше</a>
                         </div>
                     </div>
                 </div>
@@ -72,10 +72,10 @@ else
     <h3 class="text-center mt-5">Категорії товарів</h3>
     <div class="container">
         <div class="row justify-content-center">
-            @foreach (var category in Model.Select(p => p.Category).Where(c => !string.IsNullOrEmpty(c)).Distinct())
+            @foreach (var category in Model.Select(e => e.Product.Category).Where(c => !string.IsNullOrEmpty(c)).Distinct())
             {
                 <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-4">
-                    <a href="@Url.Action("Catalog", "Product", new { category = category })" class="category-card">
+                    <a href="@Url.Action("Catalog", "Warehouse", new { category = category })" class="category-card">
                         <div class="category-icon">
                             @(categoryIcons.ContainsKey(category) ? categoryIcons[category] : "🛍️")
                         </div>
@@ -86,7 +86,7 @@ else
         </div>
     </div>
 }
-<!-- 🔹 Стилі для категорій -->
+
 <style>
     .carousel {
         max-width: 600px;
@@ -114,7 +114,6 @@ else
         filter: invert(50%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(70%) contrast(90%);
     }
 
-    /* Стилізація карток категорій */
     .category-card {
         display: flex;
         flex-direction: column;

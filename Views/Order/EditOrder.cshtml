@@ -1,12 +1,13 @@
 ﻿@model Agromarket.Models.Order
 
 @{
-    ViewData["Title"] = "Редагування замовлення";
+    ViewData["Title"] = $"Редагування замовлення #{Model.Id}";
+    var entries = ViewBag.Entries as List<Agromarket.Models.WarehouseEntry>;
 }
 
-<h2>Редагування замовлення #@Model.Id</h2>
+<h2>@ViewData["Title"]</h2>
 
-<form asp-action="EditOrder" method="post" onsubmit="updateIndexes()">
+<form asp-action="EditOrder" method="post">
     <input type="hidden" asp-for="Id" />
 
     <div class="mb-3">
@@ -37,18 +38,20 @@
     <div class="mb-3">
         <label asp-for="Status" class="form-label">Статус</label>
         <select asp-for="Status" class="form-select">
-            <option value="Виконується">Виконується</option>
-            <option value="Виконано">Виконано</option>
-            <option value="Скасовано">Скасовано</option>
+            @foreach (var status in Enum.GetValues(typeof(Agromarket.Models.OrderStatus)))
+            {
+                <option value="@status">@status</option>
+            }
         </select>
     </div>
 
-    <h3>📦 Товари у замовленні</h3>
-    <table class="table">
+    <h4 class="mt-4">📦 Товари у замовленні</h4>
+
+    <table class="table" id="order-items-table">
         <thead>
         <tr>
             <th>Назва</th>
-            <th>Ціна (₴)</th>
+            <th>Ціна</th>
             <th>Кількість</th>
             <th>Одиниця</th>
             <th>Дії</th>
@@ -57,22 +60,21 @@
         <tbody id="order-items">
         @for (int i = 0; i < Model.OrderItems.Count; i++)
         {
+            var item = Model.OrderItems[i];
             <tr>
-                <td>@Model.OrderItems[i].ProductName</td>
-                <td>@Model.OrderItems[i].Price.ToString("0.00") ₴</td>
+                <td>@item.ProductName</td>
+                <td>@item.Price.ToString("0.00") ₴</td>
                 <td>
-                    <input type="number" name="OrderItems[@i].Quantity" class="form-control quantity-input"
-                           value="@Model.OrderItems[i].Quantity" min="1"
-                           data-price="@Model.OrderItems[i].Price"
-                           onchange="updateTotalAmount()" />
-                    <input type="hidden" name="OrderItems[@i].ProductId" value="@Model.OrderItems[i].ProductId" />
-                    <input type="hidden" name="OrderItems[@i].ProductName" value="@Model.OrderItems[i].ProductName" />
-                    <input type="hidden" name="OrderItems[@i].Price" value="@Model.OrderItems[i].Price" />
-                    <input type="hidden" name="OrderItems[@i].Unit" value="@Model.OrderItems[i].Unit" />
+                    <input type="number" name="OrderItems[@i].Quantity" value="@item.Quantity"
+                           class="form-control quantity-input" min="1" data-price="@item.Price" onchange="updateTotalAmount()" />
+                    <input type="hidden" name="OrderItems[@i].ProductId" value="@item.ProductId" />
+                    <input type="hidden" name="OrderItems[@i].ProductName" value="@item.ProductName" />
+                    <input type="hidden" name="OrderItems[@i].Price" value="@item.Price" />
+                    <input type="hidden" name="OrderItems[@i].Unit" value="@item.Unit" />
                 </td>
-                <td>@Model.OrderItems[i].Unit</td>
+                <td>@item.Unit</td>
                 <td>
-                    <button type="button" class="btn btn-danger btn-sm" onclick="removeItem(this)">🗑️ Видалити</button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeItem(this)">🗑️ Видалити</button>
                 </td>
             </tr>
         }
@@ -80,13 +82,14 @@
     </table>
 
     <div class="mb-3">
-        <label for="productSelect" class="form-label">Додати товар:</label>
-        <select id="productSelect" class="form-select">
+        <label class="form-label">Додати товар:</label>
+        <select id="entrySelect" class="form-select">
             <option value="">-- Виберіть товар --</option>
-            @foreach (var product in ViewBag.Products)
+            @foreach (var entry in entries)
             {
-                <option value="@product.Id" data-name="@product.Name" data-price="@product.SellingPrice" data-unit="@product.Unit">
-                    @product.Name (@product.SellingPrice?.ToString("0.00") ₴)
+                var product = entry.Product;
+                <option value="@entry.ProductId" data-name="@product.Name" data-price="@entry.SellingPrice" data-unit="@product.Unit">
+                    @product.Name (@entry.SellingPrice?.ToString("0.00") ₴)
                 </option>
             }
         </select>
@@ -107,43 +110,32 @@
     }
 
     function removeItem(button) {
-        button.closest("tr").remove();
-        updateTotalAmount();
+        button.closest('tr').remove();
     }
 
     function addProduct() {
-        let select = document.getElementById("productSelect");
-        let selectedOption = select.options[select.selectedIndex];
+        let select = document.getElementById('entrySelect');
+        let option = select.options[select.selectedIndex];
+        if (!option.value) return;
 
-        if (!selectedOption.value) return;
+        let index = document.querySelectorAll('#order-items tr').length;
 
-        let productId = selectedOption.value;
-        let productName = selectedOption.dataset.name;
-        let productPrice = parseFloat(selectedOption.dataset.price);
-        let productUnit = selectedOption.dataset.unit;
+        let row = `
+        <tr>
+            <td>${option.dataset.name}</td>
+            <td>${parseFloat(option.dataset.price).toFixed(2)} ₴</td>
+            <td>
+                <input type="number" name="OrderItems[${index}].Quantity" value="1"
+                       class="form-control quantity-input" min="1" data-price="${option.dataset.price}" onchange="updateTotalAmount()" />
+                <input type="hidden" name="OrderItems[${index}].ProductId" value="${option.value}" />
+                <input type="hidden" name="OrderItems[${index}].ProductName" value="${option.dataset.name}" />
+                <input type="hidden" name="OrderItems[${index}].Price" value="${option.dataset.price}" />
+                <input type="hidden" name="OrderItems[${index}].Unit" value="${option.dataset.unit}" />
+            </td>
+            <td>${option.dataset.unit}</td>
+            <td><button type="button" class="btn btn-sm btn-danger" onclick="removeItem(this)">🗑️</button></td>
+        </tr>`;
 
-        let tableBody = document.getElementById("order-items");
-
-        let newRow = `
-            <tr>
-                <td>${productName}</td>
-                <td>${productPrice.toFixed(2)} ₴</td>
-                <td>
-                    <input type="number" name="OrderItems[][Quantity]" class="form-control quantity-input"
-                           value="1" min="1" data-price="${productPrice}"
-                           onchange="updateTotalAmount()" />
-                    <input type="hidden" name="OrderItems[][ProductId]" value="${productId}" />
-                    <input type="hidden" name="OrderItems[][ProductName]" value="${productName}" />
-                    <input type="hidden" name="OrderItems[][Price]" value="${productPrice}" />
-                    <input type="hidden" name="OrderItems[][Unit]" value="${productUnit}" />
-                </td>
-                <td>${productUnit}</td>
-                <td>
-                    <button type="button" class="btn btn-danger btn-sm" onclick="removeItem(this)">🗑️ Видалити</button>
-                </td>
-            </tr>`;
-
-        tableBody.insertAdjacentHTML("beforeend", newRow);
-        updateTotalAmount();
+        document.getElementById('order-items').insertAdjacentHTML('beforeend', row);
     }
 </script>

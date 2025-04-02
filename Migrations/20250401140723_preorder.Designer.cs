@@ -3,6 +3,7 @@ using System;
 using Agromarket.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Agromarket.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250401140723_preorder")]
+    partial class preorder
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -146,9 +149,18 @@ namespace Agromarket.Migrations
                     b.Property<byte[]>("ImageData")
                         .HasColumnType("bytea");
 
+                    b.Property<bool>("IsAvailableForPreorder")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<decimal?>("PurchasePrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("ReceivedDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SeasonEndMonth")
                         .IsRequired()
@@ -157,6 +169,15 @@ namespace Agromarket.Migrations
                     b.Property<string>("SeasonStartMonth")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<decimal?>("SellingPrice")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("ShelfLifeWeeks")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StockQuantity")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Unit")
                         .IsRequired()
@@ -199,45 +220,6 @@ namespace Agromarket.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("StockTransactions");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.WarehouseEntry", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsAvailableForPreorder")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("PurchasePrice")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("ReceivedDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal?>("SellingPrice")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("ShelfLifeWeeks")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("WarehouseEntries");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -452,17 +434,6 @@ namespace Agromarket.Migrations
                 });
 
             modelBuilder.Entity("Agromarket.Models.StockTransaction", b =>
-                {
-                    b.HasOne("Agromarket.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.WarehouseEntry", b =>
                 {
                     b.HasOne("Agromarket.Models.Product", "Product")
                         .WithMany()

@@ -2,17 +2,20 @@
 
 @{
     ViewData["Title"] = "Список товарів";
+
+    // список ID товарів, які є в обліку (передається через ViewBag)
+    var warehouseProductIds = ViewBag.ProductsInWarehouse as HashSet<int> ?? new HashSet<int>();
 }
 
 <h2>Список товарів</h2>
 
-<!-- Форма пошуку -->
+<!-- Пошук -->
 <form asp-action="ProductList" method="get" class="mb-3 d-flex">
     <input type="text" name="searchQuery" class="form-control me-2" placeholder="Пошук за назвою..." value="@Context.Request.Query["searchQuery"]">
     <button type="submit" class="btn btn-primary">🔍</button>
 </form>
 
-<!-- Кнопки сортування та додавання товару -->
+<!-- Сортування + Додавання -->
 <div class="mb-3 d-flex justify-content-between">
     <div>
         <a asp-action="ProductList" asp-route-sortOrder="name_asc" class="btn btn-secondary">Сортувати А-Я</a>
@@ -22,7 +25,7 @@
     <a asp-action="AddProduct" class="btn btn-success">+ Додати товар</a>
 </div>
 
-<!-- Таблиця товарів -->
+<!-- Таблиця -->
 <table class="table">
     <thead>
     <tr>
@@ -36,10 +39,11 @@
     <tbody>
     @foreach (var product in Model)
     {
-        bool isActive = product.IsInSeason();
-        bool isInWarehouse = product.StockQuantity > 0; // Перевірка чи є товар у складському обліку
-        string rowClass = isActive ? "" : "inactive-product"; // Виділення неактуальних сірим
-        string grayscaleFilter = isActive ? "" : "filter: grayscale(100%);"; // Чорно-білий фільтр для фото
+        bool isInSeason = product.IsInSeason();
+        bool isInWarehouse = warehouseProductIds.Contains(product.Id);
+
+        string rowClass = isInSeason ? "" : "inactive-product";
+        string grayscaleStyle = isInSeason ? "" : "filter: grayscale(100%);";
 
         <tr class="@rowClass">
             <td>
@@ -47,8 +51,7 @@
                     @if (product.ImageData != null)
                     {
                         var base64 = Convert.ToBase64String(product.ImageData);
-                        var imgSrc = $"data:image/png;base64,{base64}";
-                        <img src="@imgSrc" alt="Фото товару" class="product-image" style="@grayscaleFilter" />
+                        <img src="data:image/png;base64,@base64" alt="Фото товару" class="product-image" style="@grayscaleStyle" />
                     }
                     else
                     {
@@ -60,10 +63,8 @@
             <td>@product.Description</td>
             <td>@product.SeasonStartMonth - @product.SeasonEndMonth</td>
             <td>
-                <!-- Кнопка редагування товару -->
                 <a asp-action="EditProduct" asp-route-id="@product.Id" class="btn btn-warning btn-sm">✏️ Редагувати</a>
 
-                <!-- Перевірка: якщо товар є у складському обліку, не можна видаляти -->
                 @if (!isInWarehouse)
                 {
                     <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('Ви впевнені, що хочете видалити цей товар?');">
@@ -76,10 +77,9 @@
                     <button class="btn btn-danger btn-sm" disabled>❌ Видалення заблоковано</button>
                 }
 
-                @if (isActive)
+                @if (isInSeason)
                 {
-                    <a href="@Url.Action("Warehouse", "Warehouse", new { selectedProductId = product.Id })"
-                       class="btn btn-success btn-sm">
+                    <a asp-action="Warehouse" asp-controller="Warehouse" asp-route-selectedProductId="@product.Id" class="btn btn-success btn-sm">
                         📦 Створити надходження
                     </a>
                 }
@@ -89,7 +89,6 @@
     </tbody>
 </table>
 
-<!-- CSS для сірого виділення неактуальних товарів -->
 <style>
     .inactive-product {
         color: gray !important;

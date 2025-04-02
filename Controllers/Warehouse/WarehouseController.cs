@@ -2,6 +2,7 @@
 using Agromarket.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,106 +20,161 @@ namespace Agromarket.Controllers.Warehouse
         }
 
         [HttpGet]
-        public IActionResult Warehouse(int? selectedProductId)
+        public IActionResult Warehouse()
         {
-            var products = _context.Products.Where(p => p.StockQuantity > 0).ToList();
-
-            ViewBag.Products = _context.Products
-                .AsEnumerable() 
-                .Where(p => p.IsInSeason()) 
+            var entries = _context.WarehouseEntries
+                .Include(e => e.Product)
+                .AsEnumerable()
+                .OrderBy(e => e.Product.Name)
+                .ThenBy(e => e.ExpirationDate)
                 .ToList();
 
-            ViewBag.SelectedProductId = selectedProductId;
+            ViewBag.Products = _context.Products
+                .AsEnumerable()
+                .Where(p => p.IsInSeason())
+                .ToList();
 
-            return View(products);
+            return View(entries);
         }
-
-
-
-
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult ReceiveMultipleStock(List<StockItem> stockItems)
+        public IActionResult ReceiveMultipleStock(List<WarehouseEntry> entries)
         {
-            foreach (var item in stockItems)
+            foreach (var newEntry in entries)
             {
-                var product = _context.Products.FirstOrDefault(p => p.Id == item.ProductId);
+                var product = _context.Products.FirstOrDefault(p => p.Id == newEntry.ProductId);
                 if (product == null || !product.IsInSeason())
-                {
                     continue;
-                }
 
-                // Додаємо товар у складський облік
-                product.StockQuantity += item.Quantity;
-                product.PurchasePrice = item.PurchasePrice;
-                product.SellingPrice = item.SellingPrice;
-                product.ReceivedDate = DateTime.UtcNow;
-                product.ShelfLifeWeeks = item.ShelfLifeWeeks;
+                var existing = _context.WarehouseEntries.FirstOrDefault(e =>
+                    e.ProductId == newEntry.ProductId &&
+                    e.Quantity == 0 &&
+                    e.PurchasePrice == newEntry.PurchasePrice &&
+                    e.SellingPrice == newEntry.SellingPrice &&
+                    e.ShelfLifeWeeks == newEntry.ShelfLifeWeeks
+                );
 
-                var transaction = new StockTransaction
+                if (existing != null)
                 {
-                    ProductId = product.Id,
-                    TransactionType = "Надходження",
-                    Quantity = item.Quantity,
-                    TransactionDate = DateTime.UtcNow,
-                    PurchasePrice = item.PurchasePrice,
-                    SellingPrice = item.SellingPrice
-                };
-
-                _context.StockTransactions.Add(transaction);
+                    existing.Quantity += newEntry.Quantity;
+                    existing.ReceivedDate = DateTime.UtcNow;
+                    existing.ExpirationDate = existing.ReceivedDate.AddDays(existing.ShelfLifeWeeks * 7);
+                }
+                else
+                {
+                    newEntry.ReceivedDate = DateTime.UtcNow;
+                    newEntry.ExpirationDate = newEntry.ReceivedDate.AddDays(newEntry.ShelfLifeWeeks * 7);
+                    _context.WarehouseEntries.Add(newEntry);
+                }
             }
 
             _context.SaveChanges();
             return RedirectToAction("Warehouse");
         }
 
+
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult DeductStock(int productId, int quantity)
+        public IActionResult DeductStock(int entryId, int quantity)
         {
-            var product = _context.Products.Find(productId);
-            if (product == null) return NotFound();
+            var entry = _context.WarehouseEntries
+                .Include(e => e.Product)
+                .FirstOrDefault(e => e.Id == entryId);
 
-            if (quantity > 0 && product.StockQuantity >= quantity)
+            if (entry == null || quantity <= 0 || entry.Quantity < quantity)
+                return BadRequest();
+
+            entry.Quantity -= quantity;
+
+            if (entry.Quantity == 0)
             {
-                product.StockQuantity -= quantity;
+                entry.ExpirationDate = null;
 
-                if (product.StockQuantity == 0)
+                if (!entry.IsAvailableForPreorder)
                 {
-                    product.ReceivedDate = null;
+                    _context.WarehouseEntries.Remove(entry);
                 }
-
-                var transaction = new StockTransaction
-                {
-                    ProductId = product.Id,
-                    TransactionType = "Списання",
-                    Quantity = quantity,
-                    TransactionDate = DateTime.UtcNow,
-                    SellingPrice = product.SellingPrice
-                };
-
-                _context.StockTransactions.Add(transaction);
-                _context.SaveChanges();
             }
 
+            _context.SaveChanges();
             return RedirectToAction("Warehouse");
         }
 
-        [HttpGet]
-        public IActionResult StockHistory(string filterType)
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult TogglePreorder([FromBody] TogglePreorderRequest request)
         {
-            var history = _context.StockTransactions
-                .OrderByDescending(t => t.TransactionDate)
-                .AsQueryable();
+            var entry = _context.WarehouseEntries.FirstOrDefault(e => e.Id == request.EntryId);
+            if (entry == null) return NotFound();
 
-            if (!string.IsNullOrEmpty(filterType))
-            {
-                history = history.Where(t => t.TransactionType == filterType);
-            }
+            entry.IsAvailableForPreorder = request.IsAvailable;
+            _context.SaveChanges();
 
-            ViewBag.FilterType = filterType;
-            return View(history.ToList());
+            return Ok();
         }
+
+        public class TogglePreorderRequest
+        {
+            public int EntryId { get; set; }
+            public bool IsAvailable { get; set; }
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult Catalog(string search, decimal? minPrice, decimal? maxPrice, bool inStock = false, string category = null, int page = 1, int pageSize = 12)
+        {
+            var entriesQuery = _context.WarehouseEntries
+                .Include(e => e.Product)
+                .AsEnumerable()
+                .Where(e =>
+                        (e.Quantity > 0 || e.IsAvailableForPreorder) &&
+                        (string.IsNullOrEmpty(search) || e.Product.Name.Contains(search, StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrEmpty(category) || e.Product.Category == category) &&
+                        (!minPrice.HasValue || e.SellingPrice >= minPrice) &&
+                        (!maxPrice.HasValue || e.SellingPrice <= maxPrice) &&
+                        (!inStock || e.Quantity > 0)
+                );
+
+            var grouped = entriesQuery
+                .GroupBy(e => e.ProductId)
+                .Select(g => g.OrderByDescending(e => e.Quantity > 0).ThenBy(e => e.ExpirationDate).First())
+                .ToList();
+
+            var totalItems = grouped.Count;
+            var paged = grouped
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            ViewBag.Categories = _context.Products
+                .Where(p => !string.IsNullOrEmpty(p.Category))
+                .Select(p => p.Category)
+                .Distinct()
+                .ToList();
+
+            ViewBag.CurrentPage = page;
+            ViewBag.TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+
+            return View(paged);
+        }
+        
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult DeleteEntry(int entryId)
+        {
+            var entry = _context.WarehouseEntries.FirstOrDefault(e => e.Id == entryId);
+            if (entry != null)
+            {
+                _context.WarehouseEntries.Remove(entry);
+                _context.SaveChanges();
+            }
+            return RedirectToAction("Warehouse");
+        }
+
+
     }
 }

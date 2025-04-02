@@ -39,23 +39,31 @@
                 <tbody>
                 @foreach (var item in Model)
                 {
-                    <tr id="cart-item-@item.ProductId" data-product-id="@item.ProductId">
-                        <td>
+                    <tr id="cart-item-@item.EntryId" data-entry-id="@item.EntryId">
+                    <td>
                             <img src="data:image/png;base64,@item.ImageBase64" class="rounded" style="width: 60px; height: auto;" />
                         </td>
                         <td>@item.Name</td>
                         <td class="price">@item.Price.ToString("0.00") грн</td>
                         <td>
-                            <input type="number" class="form-control text-center" style="width: 80px;" value="@item.Quantity" min="1"
-                                   onchange="updateQuantity(@item.ProductId, this.value)" />
+                            <input type="number"
+                                   class="form-control text-center"
+                                   style="width: 80px;"
+                                   value="@item.Quantity"
+                                   min="1"
+                                   max="@item.Quantity"
+                                   onchange="validateQuantity(this, @item.Quantity, @item.EntryId)" />
+
+
                         </td>
                         <td>@item.Unit</td>
                         <td class="total-item-price fw-bold">@((item.Price * item.Quantity).ToString("0.00")) грн</td>
                         <td>
-                            <button onclick="removeFromCart(@item.ProductId)" class="btn btn-outline-danger btn-sm">
+                            <button onclick="removeFromCart(@item.EntryId)" class="btn btn-outline-danger btn-sm">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </td>
+
                     </tr>
                 }
                 </tbody>
@@ -120,9 +128,9 @@
         }
     }
 
-    async function updateQuantity(productId, quantity) {
+    async function updateQuantity(entryId, quantity) {
         if (quantity < 1) {
-            removeFromCart(productId);
+            removeFromCart(entryId);
             return;
         }
 
@@ -130,13 +138,13 @@
             let response = await fetch('/Cart/UpdateQuantityAjax', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `productId=${productId}&quantity=${quantity}`
+                body: `entryId=${entryId}&quantity=${quantity}`
             });
 
             if (response.ok) {
                 let data = await response.json();
                 if (data.success) {
-                    document.querySelector(`#cart-item-${productId} .total-item-price`).textContent =
+                    document.querySelector(`#cart-item-${entryId} .total-item-price`).textContent =
                         data.totalItemPrice.toFixed(2) + " грн";
                     document.getElementById("totalPrice").textContent = data.totalPrice.toFixed(2) + " грн";
                 } else {
@@ -148,18 +156,18 @@
         }
     }
 
-    async function removeFromCart(productId) {
+    async function removeFromCart(entryId) {
         try {
             let response = await fetch('/Cart/RemoveFromCartAjax', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `productId=${productId}`
+                body: `entryId=${entryId}`
             });
 
             if (response.ok) {
                 let data = await response.json();
                 if (data.success) {
-                    document.getElementById(`cart-item-${productId}`).remove();
+                    document.getElementById(`cart-item-${entryId}`).remove();
                     document.getElementById("totalPrice").textContent = data.totalPrice.toFixed(2) + " грн";
 
                     if (document.querySelectorAll("tbody tr").length === 0) {
@@ -171,4 +179,15 @@
             console.error("Помилка видалення товару:", error);
         }
     }
+
+    function validateQuantity(input, max, entryId) {
+        let value = parseInt(input.value);
+        if (value > max) {
+            alert(`Максимальна кількість для цього товару: ${max}`);
+            input.value = max;
+            value = max;
+        }
+        updateQuantity(entryId, value);
+    }
+
 </script>
