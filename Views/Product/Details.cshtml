@@ -9,19 +9,53 @@
 
     bool isAvailable = Model.Quantity > 0 || Model.IsAvailableForPreorder;
     bool isPreorderOnly = Model.Quantity == 0 && Model.IsAvailableForPreorder;
+
+    // Мапа українських місяців на номери
+    var monthMap = new Dictionary<string, int>
+    {
+        ["Січень"] = 1, ["Лютий"] = 2, ["Березень"] = 3,
+        ["Квітень"] = 4, ["Травень"] = 5, ["Червень"] = 6,
+        ["Липень"] = 7, ["Серпень"] = 8, ["Вересень"] = 9,
+        ["Жовтень"] = 10, ["Листопад"] = 11, ["Грудень"] = 12
+    };
+
+    DateTime now = DateTime.Now;
+    int startMonth = monthMap.TryGetValue(product.SeasonStartMonth, out var sm) ? sm : 1;
+    int endMonth = monthMap.TryGetValue(product.SeasonEndMonth, out var em) ? em : 12;
+
+    DateTime firstDayOfSeason = new DateTime(now.Year, startMonth, 1);
+    if (firstDayOfSeason < now)
+    {
+        firstDayOfSeason = new DateTime(now.Year + 1, startMonth, 1);
+    }
+    DateTime defaultDeliveryDate = firstDayOfSeason.AddDays(2);
+    DateTime seasonEnd = new DateTime(firstDayOfSeason.Year, endMonth, 1).AddMonths(1).AddDays(-1);
+
+    string deliveryInfo = "";
+    if (Model.Quantity > 0)
+    {
+        deliveryInfo = "Доставка 1-3 дні";
+    }
+    else if (Model.IsAvailableForPreorder)
+    {
+        deliveryInfo = $"Ймовірна доставка з {defaultDeliveryDate:dd.MM.yyyy}";
+    }
+    else
+    {
+        deliveryInfo = "Наразі недоступно";
+    }
 }
+
 
 <div class="container mt-4">
     <div class="card shadow-sm p-4">
         <div class="row">
-            <!-- Фото товару -->
             <div class="col-md-6 text-center d-flex align-items-center justify-content-center">
                 <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
                     <img src="@imgSrc" class="product-image" alt="@product.Name">
                 </a>
             </div>
 
-            <!-- Інформація про товар -->
             <div class="col-md-6">
                 <h2 class="mb-3 text-center">@product.Name</h2>
 
@@ -45,6 +79,8 @@
                         <span class="text-danger">Недоступно</span>
                     }
                 </p>
+
+                <p><strong>Доставка:</strong> <span class="text-muted">@deliveryInfo</span></p>
 
                 <p><strong>Сезон:</strong>
                     <span class="badge bg-info">@product.SeasonStartMonth - @product.SeasonEndMonth</span>
@@ -77,6 +113,13 @@
                         else
                         {
                             <input type="hidden" name="quantity" value="1" />
+                            <div class="mb-3">
+                                <label for="preorderDate" class="form-label fw-bold">Оберіть дату доставки:</label>
+                                <input type="date" name="preorderDate" id="preorderDate" class="form-control"
+                                       min="@defaultDeliveryDate.ToString("yyyy-MM-dd")"
+                                       max="@seasonEnd.ToString("yyyy-MM-dd")"
+                                       value="@defaultDeliveryDate.ToString("yyyy-MM-dd")" required />
+                            </div>
                         }
 
                         <button type="submit" class="btn @(isPreorderOnly ? "btn-warning" : "btn-success") w-100 py-2">
@@ -97,7 +140,6 @@
     </div>
 </div>
 
-<!-- Модальне вікно зображення -->
 <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -112,7 +154,6 @@
     </div>
 </div>
 
-<!-- Стилі -->
 <style>
     .product-image {
         width: 100%;
@@ -149,7 +190,6 @@
     }
 </style>
 
-<!-- JS Валідація -->
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const input = document.getElementById("quantity");

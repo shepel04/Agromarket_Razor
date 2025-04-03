@@ -2,11 +2,11 @@
 
 @{
     ViewData["Title"] = "Складський облік";
+    var serializedProducts = Json.Serialize(ViewBag.Products);
 }
 
 <h2 class="mb-4">Складський облік</h2>
 
-<!-- Кнопка додавання -->
 <button class="btn btn-primary mb-3" id="openAddStockModal">➕ Додати товар на склад</button>
 
 <table class="table table-bordered table-striped align-middle text-center">
@@ -55,7 +55,6 @@
                         }
                     </span>
             </td>
-
             <td>
                 @if (entry.Quantity > 0)
                 {
@@ -71,28 +70,61 @@
                     <span class="text-muted">—</span>
                 }
             </td>
-
             <td class="text-center align-middle">
                 <input type="checkbox"
                        class="form-check-input preorder-toggle"
                        data-entry-id="@entry.Id"
                        @(entry.IsAvailableForPreorder ? "checked" : "") />
             </td>
-
             <td>
                 <form asp-controller="Warehouse" asp-action="DeleteEntry" method="post" onsubmit="return confirm('Ви дійсно хочете видалити надходження?')">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="entryId" value="@entry.Id" />
-                    <button type="submit" class="btn btn-sm btn-outline-secondary">🗑️</button>
+                    <button type="submit"
+                            class="btn btn-sm btn-outline-secondary"
+                            @(entry.Quantity > 0 ? "disabled title='Не можна видалити: товар ще є на складі'" : "")>
+                        🗑️
+                    </button>
                 </form>
+                @if (entry.Quantity == 0)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="modal" data-bs-target="#receiveToExistingModal-@entry.Id">
+                        ➕ Поповнити
+                    </button>
+                    <div class="modal fade" id="receiveToExistingModal-@entry.Id" tabindex="-1" aria-labelledby="receiveToExistingModalLabel-@entry.Id" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form asp-controller="Warehouse" asp-action="ReceiveToExisting" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Поповнення надходження: @entry.Product.Name</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <input type="hidden" name="entryId" value="@entry.Id" />
+                                        <div class="mb-3">
+                                            <label class="form-label">Кількість</label>
+                                            <input type="number" name="quantity" class="form-control" min="1" required />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Новий строк придатності (в тижнях)</label>
+                                            <input type="number" name="shelfLifeWeeks" class="form-control" min="1" required />
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-success">Зберегти</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
             </td>
         </tr>
     }
     </tbody>
 </table>
 
-
-<!-- Модальне вікно додавання надходження -->
 <div class="modal fade" id="newReceiptModal" tabindex="-1" aria-labelledby="newReceiptModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -102,79 +134,89 @@
             </div>
             <form asp-controller="Warehouse" asp-action="ReceiveMultipleStock" method="post">
                 <div class="modal-body">
-                    <table class="table table-bordered">
-                        <thead class="table-light text-center">
+                    <table class="table table-bordered align-middle text-center">
+                        <thead class="table-light">
                         <tr>
-                            <th>Товар</th>
-                            <th>Кількість</th>
-                            <th>Ціна закупівлі</th>
-                            <th>Ціна продажу</th>
-                            <th>Строк (тижні)</th>
-                            <th></th>
+                            <th class="w-30">Товар</th>
+                            <th class="w-10">Кількість</th>
+                            <th class="w-15">Ціна закупівлі</th>
+                            <th class="w-15">Ціна продажу</th>
+                            <th class="w-10">Строк (тижні)</th>
+                            <th class="w-5">Дії</th>
                         </tr>
                         </thead>
                         <tbody id="stockTableBody">
-                        <tr class="stock-item">
-                            <td>
-                                <select name="entries[0].ProductId" class="form-select">
-                                    @foreach (var product in ViewBag.Products)
-                                    {
-                                        <option value="@product.Id">@product.Name</option>
-                                    }
-                                </select>
-                            </td>
-                            <td><input type="number" name="entries[0].Quantity" class="form-control" min="1" required /></td>
-                            <td><input type="number" step="0.01" name="entries[0].PurchasePrice" class="form-control" required /></td>
-                            <td><input type="number" step="0.01" name="entries[0].SellingPrice" class="form-control" /></td>
-                            <td><input type="number" name="entries[0].ShelfLifeWeeks" class="form-control" min="1" required /></td>
-                            <td><button type="button" class="btn btn-danger remove-item">🗑</button></td>
-                        </tr>
                         </tbody>
                     </table>
-                    <button type="button" class="btn btn-secondary" id="addStockItem">+ Додати рядок</button>
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-outline-secondary" id="addStockItem">➕ Додати рядок</button>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-success">Зберегти</button>
+                    <button type="submit" class="btn btn-success">💾 Зберегти</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        document.querySelectorAll(".preorder-toggle").forEach(cb => {
-            cb.addEventListener("change", function () {
-                const entryId = this.dataset.entryId;
-                const isAvailable = this.checked;
+<style>
+    .w-5 { width: 5%; }
+    .w-10 { width: 10%; }
+    .w-15 { width: 15%; }
+    .w-30 { width: 30%; }
+</style>
 
-                fetch("/Warehouse/TogglePreorder", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: JSON.stringify({ entryId, isAvailable })
-                }).then(response => {   
-                    if (!response.ok) {
-                        alert("Помилка оновлення статусу передзамовлення.");
-                        this.checked = !isAvailable;
-                    }
-                }).catch(() => {
-                    alert("Помилка з'єднання.");
-                    this.checked = !isAvailable;
-                });
-            });
-        });
-    });
-        document.addEventListener("DOMContentLoaded", function () {
+<script>
+    const products = @Html.Raw(serializedProducts);
+
+    document.addEventListener("DOMContentLoaded", function () {
         const stockModal = new bootstrap.Modal(document.getElementById('newReceiptModal'));
         const openBtn = document.getElementById("openAddStockModal");
+        const stockTableBody = document.getElementById("stockTableBody");
+        const addBtn = document.getElementById("addStockItem");
 
-        openBtn?.addEventListener("click", () => {
-        stockModal.show();
-    });
-    });
+        openBtn?.addEventListener("click", () => stockModal.show());
 
+        addBtn.addEventListener("click", function () {
+            const index = stockTableBody.querySelectorAll("tr").length;
+
+            const selectOptions = products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+            const newRow = document.createElement("tr");
+            newRow.classList.add("stock-item");
+            newRow.innerHTML = `
+                <td><select name="entries[${index}].ProductId" class="form-select">${selectOptions}</select></td>
+                <td><input type="number" name="entries[${index}].Quantity" class="form-control text-center" min="1" required /></td>
+                <td><input type="number" step="0.01" name="entries[${index}].PurchasePrice" class="form-control text-end" required /></td>
+                <td><input type="number" step="0.01" name="entries[${index}].SellingPrice" class="form-control text-end" /></td>
+                <td><input type="number" name="entries[${index}].ShelfLifeWeeks" class="form-control text-center" min="1" required /></td>
+                <td><button type="button" class="btn btn-outline-danger btn-sm remove-item">🗑</button></td>
+            `;
+
+            stockTableBody.appendChild(newRow);
+        });
+
+        stockTableBody.addEventListener("click", function (e) {
+            if (e.target.classList.contains("remove-item")) {
+                e.target.closest("tr")?.remove();
+                updateIndexes();
+            }
+        });
+
+        function updateIndexes() {
+            const rows = stockTableBody.querySelectorAll("tr");
+            rows.forEach((row, idx) => {
+                row.querySelectorAll("select, input").forEach(input => {
+                    const name = input.getAttribute("name");
+                    if (name) {
+                        const updated = name.replace(/entries\[\d+\]/, `entries[${idx}]`);
+                        input.setAttribute("name", updated);
+                    }
+                });
+            });
+        }
+
+        addBtn.click();
+    });
 </script>
-

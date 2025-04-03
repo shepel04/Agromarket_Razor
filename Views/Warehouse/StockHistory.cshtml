@@ -20,13 +20,22 @@
             <option value="">Усі операції</option>
         }
 
-        @if (selectedFilter == "Надходження")
+        @if (selectedFilter == "Нове надходження")
         {
-            <option value="Надходження" selected>Надходження</option>
+            <option value="Надходження" selected>Нове надходження</option>
         }
         else
         {
-            <option value="Надходження">Надходження</option>
+            <option value="Надходження">Нове надходження</option>
+        }
+
+        @if (selectedFilter == "Поповнення")
+        {
+            <option value="Поповнення" selected>Поповнення</option>
+        }
+        else
+        {
+            <option value="Поповнення">Поповнення</option>
         }
 
         @if (selectedFilter == "Списання")
@@ -38,6 +47,7 @@
             <option value="Списання">Списання</option>
         }
     </select>
+
 </form>
 
 <table class="table">

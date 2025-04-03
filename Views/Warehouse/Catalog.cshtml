@@ -6,13 +6,11 @@
 
 <h2 class="text-center mb-4">Каталог товарів</h2>
 
-<!-- Кнопка "Показати фільтри" -->
 <button id="showFilters" class="btn btn-dark position-fixed top-50 start-0 translate-middle-y">
     <i class="bi bi-funnel-fill"></i>
 </button>
 
 <div class="d-flex">
-    <!-- Бокова панель фільтрів -->
     <div id="sidebar" class="sidebar bg-light p-3">
         <button class="btn btn-outline-dark w-100 mb-3" id="toggleFilters">Сховати фільтри</button>
 
@@ -51,50 +49,66 @@
         </form>
     </div>
 
-    <!-- Список товарів -->
     <div id="catalogContainer" class="container-fluid">
         <div class="row">
-            @foreach (var entry in Model)
+            @if (!Model.Any())
             {
-                var product = entry.Product;
-                var base64 = product.ImageData != null ? Convert.ToBase64String(product.ImageData) : null;
-                var imgSrc = base64 != null ? $"data:image/png;base64,{base64}" : "/img/no-image.png";
-                var availabilityText = entry.Quantity > 0
-                    ? $"В наявності: {entry.Quantity} {product.Unit}"
-                    : "Доступно для передзамовлення";
-                var isAvailable = entry.Quantity > 0 || entry.IsAvailableForPreorder;
-
-                <div class="col-6 col-md-4 col-lg-3 mb-4">
-                    <div class="card product-card h-100">
-                        <a href="@Url.Action("Details", "Product", new { entryId = entry.Id })" class="card-link text-decoration-none">
-                            <div class="image-container">
-                                <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name">
-                            </div>
-                            <div class="card-body text-center">
-                                <h6 class="card-title text-truncate">@product.Name</h6>
-                                <p class="card-text price">@entry.SellingPrice?.ToString("0.00") грн</p>
-                                <p class="text-muted small">@availabilityText</p>
-                            </div>
-                        </a>
-
-                        @if (isAvailable)
-                        {
-                            <form asp-controller="Cart" asp-action="AddToCart" method="post" class="d-grid m-2">
-                                <input type="hidden" name="entryId" value="@entry.Id" />
-                                <input type="hidden" name="productId" value="@product.Id" />
-                                <input type="hidden" name="name" value="@product.Name" />
-                                <input type="hidden" name="price" value="@entry.SellingPrice" />
-                                <input type="hidden" name="unit" value="@product.Unit" />
-                                <input type="hidden" name="imageBase64" value="@base64" />
-                                <button type="submit" class="btn btn-success btn-sm">Додати в кошик</button>
-                            </form>
-                        }
+                <div class="col-12">
+                    <div class="card text-center border-0 bg-light py-5 animate__animated animate__fadeIn">
+                        <div class="card-body">
+                            <i class="bi bi-search display-3 text-muted mb-3"></i>
+                            <h4 class="text-muted">Нічого не знайдено</h4>
+                            <p class="text-secondary">Не знайдено жодного товару за заданими параметрами.</p>
+                            <button class="btn btn-outline-secondary" id="resetFiltersInline">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Скинути фільтри
+                            </button>
+                        </div>
                     </div>
                 </div>
             }
+            else
+            {
+                @foreach (var entry in Model)
+                {
+                    var product = entry.Product;
+                    var base64 = product.ImageData != null ? Convert.ToBase64String(product.ImageData) : null;
+                    var imgSrc = base64 != null ? $"data:image/png;base64,{base64}" : "/img/no-image.png";
+                    var availabilityText = entry.Quantity > 0
+                        ? $"В наявності: {entry.Quantity} {product.Unit}"
+                        : "Доступно для передзамовлення";
+                    var isAvailable = entry.Quantity > 0 || entry.IsAvailableForPreorder;
+
+                    <div class="col-6 col-md-4 col-lg-3 mb-4 animate__animated animate__fadeIn">
+                        <div class="card product-card h-100">
+                            <a href="@Url.Action("Details", "Product", new { entryId = entry.Id })" class="card-link text-decoration-none">
+                                <div class="image-container">
+                                    <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name">
+                                </div>
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-truncate">@product.Name</h6>
+                                    <p class="card-text price">@entry.SellingPrice?.ToString("0.00") грн</p>
+                                    <p class="text-muted small">@availabilityText</p>
+                                </div>
+                            </a>
+
+                            @if (isAvailable)
+                            {
+                                <form asp-controller="Cart" asp-action="AddToCart" method="post" class="d-grid m-2">
+                                    <input type="hidden" name="entryId" value="@entry.Id" />
+                                    <input type="hidden" name="productId" value="@product.Id" />
+                                    <input type="hidden" name="name" value="@product.Name" />
+                                    <input type="hidden" name="price" value="@entry.SellingPrice" />
+                                    <input type="hidden" name="unit" value="@product.Unit" />
+                                    <input type="hidden" name="imageBase64" value="@base64" />
+                                    <button type="submit" class="btn btn-success btn-sm">Додати в кошик</button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                }
+            }
         </div>
 
-        <!-- 🔄 Пагінація -->
         @if (ViewBag.TotalPages > 1)
         {
             <nav class="mt-4">
@@ -119,8 +133,8 @@
 </div>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css" />
 
-<!-- 💅 Стилі -->
 <style>
     .d-flex {
         position: relative;
@@ -134,7 +148,7 @@
         left: 0;
         top: 0;
         bottom: 0;
-        z-index: 1000;
+        z-index: 50;
         overflow-y: auto;
         box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     }
@@ -182,7 +196,6 @@
     }
 </style>
 
-<!-- ⚙️ Скріпт -->
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const toggleButton = document.getElementById('toggleFilters');
@@ -190,22 +203,27 @@
         const sidebar = document.getElementById('sidebar');
         const catalogContainer = document.getElementById('catalogContainer');
         const resetButton = document.getElementById('resetFilters');
+        const resetInline = document.getElementById('resetFiltersInline');
         const filterForm = document.getElementById('filterForm');
 
-        toggleButton.addEventListener('click', () => {
+        toggleButton?.addEventListener('click', () => {
             sidebar.classList.add('hidden');
             catalogContainer.style.paddingLeft = "20px";
             showFiltersButton.style.display = "block";
         });
 
-        showFiltersButton.addEventListener('click', () => {
+        showFiltersButton?.addEventListener('click', () => {
             sidebar.classList.remove('hidden');
             catalogContainer.style.paddingLeft = "270px";
             showFiltersButton.style.display = "none";
         });
 
-        resetButton.addEventListener('click', () => {
+        resetButton?.addEventListener('click', () => {
             filterForm.reset();
+            window.location.href = window.location.pathname;
+        });
+
+        resetInline?.addEventListener('click', () => {
             window.location.href = window.location.pathname;
         });
     });

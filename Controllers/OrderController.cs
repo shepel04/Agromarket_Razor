@@ -253,5 +253,50 @@ namespace Agromarket.Controllers
         {
             HttpContext.Session.Remove("Cart");
         }
+        
+        [HttpGet]
+        public IActionResult EditOrder(int id)
+        {
+            var order = _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefault(o => o.Id == id);
+
+            if (order == null)
+                return NotFound();
+
+            ViewBag.Entries = _context.WarehouseEntries
+                .Include(e => e.Product)
+                .Where(e => e.Quantity > 0)
+                .ToList();
+
+            return View(order);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult EditOrder(Order updatedOrder)
+        {
+            var existingOrder = _context.Orders
+                .Include(o => o.OrderItems)
+                .FirstOrDefault(o => o.Id == updatedOrder.Id);
+
+            if (existingOrder == null)
+                return NotFound();
+
+            // Оновлення полів замовлення
+            existingOrder.CustomerName = updatedOrder.CustomerName;
+            existingOrder.CustomerEmail = updatedOrder.CustomerEmail;
+            existingOrder.CustomerPhone = updatedOrder.CustomerPhone;
+            existingOrder.DeliveryAddress = updatedOrder.DeliveryAddress;
+            existingOrder.OrderDate = updatedOrder.OrderDate;
+            existingOrder.Status = updatedOrder.Status;
+
+            // Оновлення товарів замовлення
+            _context.OrderItems.RemoveRange(existingOrder.OrderItems);
+            existingOrder.OrderItems = updatedOrder.OrderItems;
+
+            _context.SaveChanges();
+            return RedirectToAction("OrderList");
+        }
     }
 }

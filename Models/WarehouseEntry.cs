@@ -25,6 +25,8 @@ namespace Agromarket.Models
         public bool IsAvailableForPreorder { get; set; } = false;
 
         public DateTime? ExpirationDate { get; set; }
+        
+        public DateTime? ExpectedRestockDate { get; set; }
 
     }
 }

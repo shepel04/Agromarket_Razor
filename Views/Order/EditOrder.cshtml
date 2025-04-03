@@ -66,76 +66,19 @@
                 <td>@item.Price.ToString("0.00") ₴</td>
                 <td>
                     <input type="number" name="OrderItems[@i].Quantity" value="@item.Quantity"
-                           class="form-control quantity-input" min="1" data-price="@item.Price" onchange="updateTotalAmount()" />
+                           class="form-control quantity-input" min="1" data-price="@item.Price"/>
                     <input type="hidden" name="OrderItems[@i].ProductId" value="@item.ProductId" />
                     <input type="hidden" name="OrderItems[@i].ProductName" value="@item.ProductName" />
                     <input type="hidden" name="OrderItems[@i].Price" value="@item.Price" />
                     <input type="hidden" name="OrderItems[@i].Unit" value="@item.Unit" />
                 </td>
                 <td>@item.Unit</td>
-                <td>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="removeItem(this)">🗑️ Видалити</button>
-                </td>
+                
             </tr>
         }
         </tbody>
     </table>
 
-    <div class="mb-3">
-        <label class="form-label">Додати товар:</label>
-        <select id="entrySelect" class="form-select">
-            <option value="">-- Виберіть товар --</option>
-            @foreach (var entry in entries)
-            {
-                var product = entry.Product;
-                <option value="@entry.ProductId" data-name="@product.Name" data-price="@entry.SellingPrice" data-unit="@product.Unit">
-                    @product.Name (@entry.SellingPrice?.ToString("0.00") ₴)
-                </option>
-            }
-        </select>
-        <button type="button" class="btn btn-primary mt-2" onclick="addProduct()">➕ Додати</button>
-    </div>
-
     <button type="submit" class="btn btn-success">💾 Зберегти</button>
 </form>
 
-<script>
-    function updateTotalAmount() {
-        let total = 0;
-        document.querySelectorAll('.quantity-input').forEach(input => {
-            let price = parseFloat(input.dataset.price);
-            let quantity = parseInt(input.value);
-            total += price * quantity;
-        });
-    }
-
-    function removeItem(button) {
-        button.closest('tr').remove();
-    }
-
-    function addProduct() {
-        let select = document.getElementById('entrySelect');
-        let option = select.options[select.selectedIndex];
-        if (!option.value) return;
-
-        let index = document.querySelectorAll('#order-items tr').length;
-
-        let row = `
-        <tr>
-            <td>${option.dataset.name}</td>
-            <td>${parseFloat(option.dataset.price).toFixed(2)} ₴</td>
-            <td>
-                <input type="number" name="OrderItems[${index}].Quantity" value="1"
-                       class="form-control quantity-input" min="1" data-price="${option.dataset.price}" onchange="updateTotalAmount()" />
-                <input type="hidden" name="OrderItems[${index}].ProductId" value="${option.value}" />
-                <input type="hidden" name="OrderItems[${index}].ProductName" value="${option.dataset.name}" />
-                <input type="hidden" name="OrderItems[${index}].Price" value="${option.dataset.price}" />
-                <input type="hidden" name="OrderItems[${index}].Unit" value="${option.dataset.unit}" />
-            </td>
-            <td>${option.dataset.unit}</td>
-            <td><button type="button" class="btn btn-sm btn-danger" onclick="removeItem(this)">🗑️</button></td>
-        </tr>`;
-
-        document.getElementById('order-items').insertAdjacentHTML('beforeend', row);
-    }
-</script>
