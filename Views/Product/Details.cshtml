@@ -24,12 +24,21 @@
     int endMonth = monthMap.TryGetValue(product.SeasonEndMonth, out var em) ? em : 12;
 
     DateTime firstDayOfSeason = new DateTime(now.Year, startMonth, 1);
-    if (firstDayOfSeason < now)
+    DateTime endOfSeason = new DateTime(now.Year, endMonth, 1).AddMonths(1).AddDays(-1);
+
+// Якщо сезон уже минув у цьому році, переносимо на наступний
+    if (endOfSeason < now)
     {
         firstDayOfSeason = new DateTime(now.Year + 1, startMonth, 1);
+        endOfSeason = new DateTime(now.Year + 1, endMonth, 1).AddMonths(1).AddDays(-1);
     }
-    DateTime defaultDeliveryDate = firstDayOfSeason.AddDays(2);
-    DateTime seasonEnd = new DateTime(firstDayOfSeason.Year, endMonth, 1).AddMonths(1).AddDays(-1);
+
+    DateTime defaultDeliveryDate = (now >= firstDayOfSeason && now <= endOfSeason)
+        ? now.AddDays(7)  // якщо ми в межах сезону — +1 тиждень
+        : firstDayOfSeason.AddDays(2); // якщо ще ні — від початку сезону +2 дні
+
+    DateTime seasonEnd = endOfSeason;
+
 
     string deliveryInfo = "";
     if (Model.Quantity > 0)

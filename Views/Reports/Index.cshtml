@@ -1,0 +1,63 @@
+﻿@{
+    ViewData["Title"] = "Звіти";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4">📊 Звіти</h2>
+
+    <table class="table table-bordered table-hover align-middle shadow-sm">
+        <thead class="table-success">
+        <tr>
+            <th style="width: 5%">#</th>
+            <th>Назва звіту</th>
+            <th>Опис</th>
+            <th style="width: 15%">Дія</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>1</td>
+            <td>Продажі за період</td>
+            <td>Звіт по всіх виконаних замовленнях у заданому проміжку часу</td>
+            <td>
+                <div class="d-flex flex-wrap gap-2">
+                    <a asp-controller="Reports" asp-action="SalesReport" class="btn btn-outline-success btn-sm">
+                        Переглянути
+                    </a>
+                    <a asp-action="ExportSalesReport"
+                       asp-route-startDate="@ViewBag.StartDate?.ToString("yyyy-MM-dd")"
+                       asp-route-endDate="@ViewBag.EndDate?.ToString("yyyy-MM-dd")"
+                       class="btn btn-success btn-sm">
+                        📥 Excel
+                    </a>
+                </div>
+            </td>
+
+        </tr>
+        <tr>
+            <td>2</td>
+            <td>Залишки на складі</td>
+            <td>Поточні залишки товарів на складах</td>
+            <td>
+                <a asp-controller="StockReport" asp-action="Stock" class="btn btn-outline-success btn-sm">
+                    Переглянути
+                </a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .btn-outline-success {
+        color: #fff !important;
+        background-color: #198754 !important;
+        border-color: #198754 !important;
+    }
+
+    .btn-outline-success:hover {
+        background-color: #157347 !important;
+        border-color: #146c43 !important;
+    }
+</style>
+

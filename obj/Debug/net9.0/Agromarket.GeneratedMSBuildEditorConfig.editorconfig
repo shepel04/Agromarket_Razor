@@ -224,6 +224,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJcX09yZGVyRGV0YWlscy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/Razor/Agromarket/Views/Order/_OrderTablePartial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJcX09yZGVyVGFibGVQYXJ0aWFsLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/Razor/Agromarket/Views/Product/AddProduct.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZHVjdFxBZGRQcm9kdWN0LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
@@ -242,6 +246,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/Razor/Agromarket/Views/Profile/OrderHistory.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUHJvZmlsZVxPcmRlckhpc3RvcnkuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Razor/Agromarket/Views/Reports/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Razor/Agromarket/Views/Reports/SalesReport.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUmVwb3J0c1xTYWxlc1JlcG9ydC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/Razor/Agromarket/Views/Shared/Error.cshtml]

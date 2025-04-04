@@ -1,0 +1,131 @@
+﻿@model List<Agromarket.Controllers.SalesReportRow>
+@{
+    ViewData["Title"] = "Звіт продажів за період";
+    var startDate = ViewBag.StartDate as DateTime?;
+    var endDate = ViewBag.EndDate as DateTime?;
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-success">📈 Звіт продажів за період</h2>
+
+    <form id="reportForm" method="get" asp-action="SalesReport" class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label for="startDate" class="form-label">Початкова дата</label>
+            <input type="date" id="startDate" name="startDate" class="form-control" value="@(startDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-md-4">
+            <label for="endDate" class="form-label">Кінцева дата</label>
+            <input type="date" id="endDate" name="endDate" class="form-control" value="@(endDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-md-4 d-flex align-items-end gap-2">
+            <button type="submit" name="action" value="generate" class="btn btn-success w-100">🔍 Згенерувати звіт</button>
+            <button type="button" onclick="downloadExcel()" class="btn btn-outline-success w-100">📥 Excel</button>
+
+        </div>
+    </form>
+
+    <!-- Пресети -->
+    <div class="mb-4">
+        <span class="me-2 fw-bold text-muted">Швидкий вибір:</span>
+        <button type="button" class="btn btn-outline-success btn-sm me-2 text-white" onclick="setPreset('day')">Сьогодні</button>
+        <button type="button" class="btn btn-outline-success btn-sm me-2 text-white" onclick="setPreset('week')">Останній тиждень</button>
+        <button type="button" class="btn btn-outline-success btn-sm me-2 text-white" onclick="setPreset('month')">Останній місяць</button>
+        <button type="button" class="btn btn-outline-success btn-sm me-2 text-white" onclick="setPreset('year')">Останній рік</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPreset('all')">Весь час</button>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">За вказаний період продажів не знайдено.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-bordered align-middle">
+                <thead class="table-success text-center">
+                <tr>
+                    <th>Товар</th>
+                    <th>Кількість</th>
+                    <th>Одиниця</th>
+                    <th>Сума продажу</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.ProductName</td>
+                        <td class="text-center">@item.TotalQuantity</td>
+                        <td class="text-center">@item.Unit</td>
+                        <td class="text-end">@item.TotalRevenue.ToString("0.00") грн</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <a asp-action="Index" class="btn btn-outline-secondary mt-4">← Назад до списку звітів</a>
+</div>
+
+@section Scripts {
+    <script>
+        function setPreset(type) {
+            const today = new Date();
+            let start = new Date();
+            let end = today;
+
+            switch (type) {
+                case 'day': start = today; break;
+                case 'week': start.setDate(today.getDate() - 7); break;
+                case 'month': start.setMonth(today.getMonth() - 1); break;
+                case 'year': start.setFullYear(today.getFullYear() - 1); break;
+                case 'all':
+                    document.getElementById("startDate").value = "";
+                    document.getElementById("endDate").value = "";
+                    document.getElementById("reportForm").submit();
+                    return;
+            }
+
+            document.getElementById("startDate").value = start.toISOString().slice(0, 10);
+            document.getElementById("endDate").value = end.toISOString().slice(0, 10);
+            document.getElementById("reportForm").submit();
+        }
+
+        function downloadExcel() {
+            const start = document.getElementById("startDate").value;
+            const end = document.getElementById("endDate").value;
+
+            const url = `/Reports/SalesReport?startDate=${start}&endDate=${end}&action=export`;
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", "");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+}
+
+<style>
+    .btn-success {
+        color: #fff !important;
+    }
+
+    .btn-outline-secondary.bg-success {
+        color: #fff !important;
+        border-color: #198754 !important;
+    }
+
+    .btn-outline-success {
+        color: #fff !important;
+        background-color: #198754 !important;
+        border-color: #198754 !important;
+    }
+
+    .btn-outline-success:hover {
+        background-color: #157347 !important;
+        border-color: #146c43 !important;
+    }
+</style>

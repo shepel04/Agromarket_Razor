@@ -1,38 +1,42 @@
-﻿@model Agromarket.Models.Order
-
-<h5>Деталі замовлення #@Model.Id</h5>
-
-<p><strong>Клієнт:</strong> @Model.CustomerName</p>
-<p><strong>Email:</strong> @Model.CustomerEmail</p>
-<p><strong>Телефон:</strong> @Model.CustomerPhone</p>
-<p><strong>Адреса доставки:</strong> @Model.DeliveryAddress</p>
-<p><strong>Дата замовлення:</strong> @Model.OrderDate.ToString("dd.MM.yyyy HH:mm")</p>
-
-<h6 class="mt-4">📦 Товари у замовленні:</h6>
-
-<ul class="list-group">
+﻿<table class="table table-bordered table-striped">
+    <thead class="table-light">
+    <tr>
+        <th>Товар</th>
+        <th>Кількість</th>
+        <th>Ціна</th>
+        <th>Одиниця</th>
+        <th>Сума</th>
+        <th>Тип</th>
+    </tr>
+    </thead>
+    <tbody>
     @foreach (var item in Model.OrderItems)
     {
-        var entry = ViewBag.Entries != null
-            ? ((List<Agromarket.Models.WarehouseEntry>)ViewBag.Entries).FirstOrDefault(e => e.ProductId == item.ProductId)
-            : null;
-
-        string unit = item.Unit;
-        decimal price = item.Price;
-        string productName = item.ProductName;
-
-        if (entry != null)
-        {
-            productName = entry.Product.Name;
-            price = entry.SellingPrice ?? item.Price;
-            unit = entry.Product.Unit;
-        }
-
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-            <span>@productName (@item.Quantity @unit)</span>
-            <span>@(price * item.Quantity) грн</span>
-        </li>
+        <tr>
+            <td>
+                @item.ProductName
+                @if (item.IsPreorder)
+                {
+                    <span class="badge bg-warning text-dark ms-2">Передзамовлення</span>
+                }
+            </td>
+            <td>@item.Quantity</td>
+            <td>@item.Price.ToString("0.00") грн</td>
+            <td>@item.Unit</td>
+            <td>@(item.Price * item.Quantity) грн</td>
+            <td>
+                @if (item.IsPreorder)
+                {
+                    <span class="text-warning">
+                        Ймовірна доставка: @item.PreorderDate?.ToString("dd.MM.yyyy")
+                    </span>
+                }
+                else
+                {
+                    <span class="text-success">Звичайне замовлення</span>
+                }
+            </td>
+        </tr>
     }
-</ul>
-
-<p class="mt-3"><strong>Загальна сума:</strong> @Model.TotalAmount.ToString("0.00") грн</p>
+    </tbody>
+</table>

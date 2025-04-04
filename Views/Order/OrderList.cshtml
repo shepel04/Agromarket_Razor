@@ -1,21 +1,34 @@
 ﻿@model IEnumerable<Agromarket.Models.Order>
+@using Agromarket.Models
+
 @{
     ViewData["Title"] = "Список замовлень";
-    var ordersByStatus = Model.GroupBy(o => o.Status).ToDictionary(g => g.Key, g => g.ToList());
+
+    var ordersByStatus = Model
+        .Where(o => o.OrderItems.All(i => !i.IsPreorder))
+        .GroupBy(o => o.Status)
+        .ToDictionary(g => g.Key, g => g.ToList());
+
+    var preorderOrdersByStatus = Model
+        .Where(o => o.OrderItems.Any(i => i.IsPreorder))
+        .GroupBy(o => o.Status)
+        .ToDictionary(g => g.Key, g => g.ToList());
 }
 
 <h2 class="mb-4">Список замовлень</h2>
 
-@if (TempData["StockError"] != null)
+@if (TempData["StatusError"] != null)
 {
-    <div class="alert alert-danger">
-        @Html.Raw(TempData["StockError"])
+    <div id="statusErrorAlert" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        @Html.Raw(TempData["StatusError"])
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрити"></button>
     </div>
 }
 
 <!-- Вкладки -->
 <ul class="nav nav-tabs mb-3" id="orderStatusTabs" role="tablist">
-    @foreach (var status in Enum.GetValues(typeof(Agromarket.Models.OrderStatus)).Cast<Agromarket.Models.OrderStatus>())
+    @foreach (var status in Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>())
     {
         var isActive = status == OrderStatus.Виконується ? "active" : "";
         <li class="nav-item" role="presentation">
@@ -24,73 +37,48 @@
             </button>
         </li>
     }
+
+    @foreach (var status in Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>())
+    {
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-preorder-@status" data-bs-toggle="tab" data-bs-target="#panel-preorder-@status" type="button" role="tab">
+                Передзамовлення - @status
+            </button>
+        </li>
+    }
 </ul>
 
 <!-- Контент вкладок -->
 <div class="tab-content">
-    @foreach (var status in Enum.GetValues(typeof(Agromarket.Models.OrderStatus)).Cast<Agromarket.Models.OrderStatus>())
+    @foreach (var status in Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>())
     {
         var isActive = status == OrderStatus.Виконується ? "show active" : "";
-        var orders = ordersByStatus.ContainsKey(status) ? ordersByStatus[status] : new List<Agromarket.Models.Order>();
+        var orders = ordersByStatus.ContainsKey(status) ? ordersByStatus[status] : new List<Order>();
 
         <div class="tab-pane fade @isActive" id="panel-@status" role="tabpanel">
             @if (!orders.Any())
             {
-                <div class="alert alert-info">Немає замовлень зі статусом <strong>@status</strong>.</div>
+                <div class="alert alert-info">Немає звичайних замовлень зі статусом <strong>@status</strong>.</div>
             }
             else
             {
-                <table class="table table-bordered table-striped align-middle">
-                    <thead>
-                    <tr>
-                        <th>№</th>
-                        <th>Клієнт</th>
-                        <th>Email</th>
-                        <th>Телефон</th>
-                        <th>Сума</th>
-                        <th>Дата</th>
-                        <th>Статус</th>
-                        <th>Дії</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach (var order in orders)
-                    {
-                        <tr id="order-@order.Id">
-                            <td>@order.Id</td>
-                            <td>@order.CustomerName</td>
-                            <td>@order.CustomerEmail</td>
-                            <td>@order.CustomerPhone</td>
-                            <td>@order.TotalAmount.ToString("0") ₴</td>
-                            <td>@order.OrderDate.ToShortDateString()</td>
-                            <td>
-                                <form asp-action="UpdateStatus" method="post" style="display:inline;">
-                                    <input type="hidden" name="id" value="@order.Id" />
-                                    <select name="newStatus" class="form-select form-select-sm d-inline-block" style="width: auto;">
-                                        @foreach (var s in Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>())
-                                        {
-                                            <option value="@s" selected="@(order.Status == s ? "selected" : null)">@s</option>
-                                        }
-                                    </select>
-                                    <button type="submit" class="btn btn-primary btn-sm">Змінити</button>
-                                </form>
-                            </td>
-                            <td>
-                                <a asp-action="EditOrder" asp-route-id="@order.Id" class="btn btn-warning btn-sm">✏️ Редагувати</a>
-                                <button class="btn btn-info btn-sm" onclick="toggleOrderDetails(@order.Id)">📜 Деталі</button>
-                                <button onclick="deleteOrder(@order.Id)" class="btn btn-danger btn-sm">🗑️</button>
-                            </td>
-                        </tr>
-                        <tr id="order-details-@order.Id" class="d-none">
-                            <td colspan="8">
-                                <div id="details-content-@order.Id" class="border p-3 rounded bg-light">
-                                    <p><strong>Завантаження...</strong></p>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
+                <partial name="_OrderTablePartial" model="orders" />
+            }
+        </div>
+    }
+
+    @foreach (var status in Enum.GetValues(typeof(OrderStatus)).Cast<OrderStatus>())
+    {
+        var orders = preorderOrdersByStatus.ContainsKey(status) ? preorderOrdersByStatus[status] : new List<Order>();
+
+        <div class="tab-pane fade" id="panel-preorder-@status" role="tabpanel">
+            @if (!orders.Any())
+            {
+                <div class="alert alert-info">Немає передзамовлень зі статусом <strong>@status</strong>.</div>
+            }
+            else
+            {
+                <partial name="_OrderTablePartial" model="orders" />
             }
         </div>
     }
@@ -141,5 +129,13 @@
                 console.error("Помилка при видаленні:", error);
             }
         }
+
+        setTimeout(function () {
+            const alert = document.getElementById("statusErrorAlert");
+            if (alert) {
+                const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                bsAlert.close();
+            }
+        }, 5000);
     </script>
 }

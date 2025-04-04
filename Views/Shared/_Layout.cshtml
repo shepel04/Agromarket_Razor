@@ -4,28 +4,78 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>@ViewData["Title"] - Agromarket</title>
-    <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/Agromarket.styles.css" asp-append-version="true"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+
     <style>
-        .navbar-nav .nav-link {
-            white-space: nowrap;
-            transition: background-color 0.3s, color 0.3s;
+        body {
+            background-color: #f6fff6;
         }
 
-        .navbar-nav .nav-link:hover {
-            background-color: #f8f9fa;
-            color: #198754 !important;
+        .navbar {
+            background-color: #e6f4e6;
+        }
+
+        .navbar .navbar-brand,
+        .navbar .nav-link,
+        .dropdown-item {
+            color: #145c2b !important;
+        }
+
+        .navbar .nav-link:hover,
+        .dropdown-item:hover {
+            background-color: #d4f1d4;
+        }
+
+        .btn-success, .btn-outline-success {
+            background-color: #4CAF50;
+            border-color: #4CAF50;
+        }
+
+        .btn-success:hover {
+            background-color: #45a049;
+        }
+
+        .footer {
+            background-color: #e6f4e6;
+            color: #2f4f2f;
+        }
+
+        .table thead {
+            background-color: #d1f7d1;
+        }
+
+        .nav-tabs .nav-link.active {
+            background-color: #a7e6a7;
+            color: #145c2b;
+            font-weight: bold;
+        }
+
+        .nav-tabs .nav-link {
+            color: #198754;
+        }
+
+        .badge.bg-success {
+            background-color: #4CAF50 !important;
+        }
+
+        .badge.bg-warning {
+            background-color: #ffeb99 !important;
+            color: #4a3f00 !important;
+        }
+
+        .box-shadow {
+            box-shadow: 0 4px 6px rgba(0,0,0,.1);
         }
     </style>
 </head>
 <body>
 <header>
-    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
+    <nav class="navbar navbar-expand-lg border-bottom box-shadow mb-3">
         <div class="container-fluid">
-            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Agromarket</a>
+            <a class="navbar-brand fw-bold" asp-area="" asp-controller="Home" asp-action="Index">Agromarket</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
                     aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -34,7 +84,7 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-dark" href="#" id="mainNavDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle" href="#" id="mainNavDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-bars"></i> Меню
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="mainNavDropdown">
@@ -50,6 +100,7 @@
                             }
                             @if (User.IsInRole("admin") || User.IsInRole("clientmanager")) {
                                 <li><a class="dropdown-item" asp-controller="Order" asp-action="OrderList"><i class="fas fa-box"></i> Замовлення</a></li>
+                                <li><a class="dropdown-item" asp-controller="Reports" asp-action=""><i class="fas fa-chart-line"></i> Звіти</a></li>
                             }
                         </ul>
                     </li>
@@ -59,7 +110,7 @@
                     @if (User.IsInRole("client") || User.IsInRole("admin"))
                     {
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Cart" asp-action="Index">
+                            <a class="nav-link" asp-controller="Cart" asp-action="Index">
                                 <i class="fas fa-shopping-cart"></i> Кошик
                             </a>
                         </li>
@@ -89,87 +140,24 @@
         </div>
     </nav>
 </header>
+
 <div class="container">
     <main role="main" class="pb-3">
         @RenderBody()
     </main>
 </div>
 
-<footer class="border-top footer text-muted">
-    <div class="container">
-        &copy; 2025 - Agromarket - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+<footer class="footer border-top py-3 mt-4">
+    <div class="container d-flex justify-content-between">
+        <span>&copy; 2025 - Agromarket</span>
+        <a asp-area="" asp-controller="Home" asp-action="Privacy" class="text-success">Privacy</a>
     </div>
 </footer>
+
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        loadNotifications();
 
-        async function loadNotifications() {
-            try {
-                const res = await fetch('/Notification/GetUserNotifications');
-                const data = await res.json();
-
-                const list = document.getElementById("notificationList");
-                list.innerHTML = "";
-
-                if (data.length === 0) {
-                    list.innerHTML = `<li class="dropdown-item text-muted">Сповіщень немає</li>`;
-                    return;
-                }
-
-                document.getElementById("notificationIndicator").classList.remove("d-none");
-
-                data.forEach(n => {
-                    const li = document.createElement("li");
-                    li.classList.add("dropdown-item");
-                    li.innerText = n.message;
-
-                    if (n.redirectUrl) {
-                        li.style.cursor = "pointer";
-                        li.addEventListener("click", () => {
-                            window.location.href = n.redirectUrl;
-                        });
-                    }
-                    else {
-                        li.innerText = n.message;
-                    }
-                    list.appendChild(li);
-                });
-
-                list.innerHTML += `<li><hr class="dropdown-divider"></li>
-                <li class="text-center">
-                    <button class="btn btn-sm btn-outline-secondary" id="markAsReadBtn">Помітити як прочитано</button>
-                </li>`;
-
-                document.getElementById("markAsReadBtn").addEventListener("click", async () => {
-                    await markNotificationsAsRead();
-                });
-
-            } catch (err) {
-                console.error("Помилка завантаження сповіщень", err);
-            }
-        }
-
-        async function markNotificationsAsRead() {
-            try {
-                const res = await fetch('/Notification/MarkAllAsRead', {
-                    method: 'POST'
-                });
-
-                if (res.ok) {
-                    document.getElementById("notificationList").innerHTML = `<li class="dropdown-item text-muted">Сповіщень немає</li>`;
-                    document.getElementById("notificationIndicator").classList.add("d-none");
-                }
-            } catch (err) {
-                console.error("Помилка при оновленні сповіщень", err);
-            }
-        }
-    });
-
-</script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

@@ -43,7 +43,20 @@
                     <td>
                             <img src="data:image/png;base64,@item.ImageBase64" class="rounded" style="width: 60px; height: auto;" />
                         </td>
-                        <td>@item.Name</td>
+                        <td>
+                            <div>
+                                @item.Name
+                                @if (item.IsPreorder)
+                                {
+                                    <span class="badge bg-warning text-dark ms-2">Передзамовлення</span>
+                                    @if (item.PreorderDate != null)
+                                    {
+                                        <div class="text-muted small">Очікувана дата: @item.PreorderDate?.ToString("dd.MM.yyyy")</div>
+                                    }
+                                }
+                            </div>
+                        </td>
+
                         <td class="price">@item.Price.ToString("0.00") грн</td>
                         <td>
                             <input type="number"
@@ -51,8 +64,9 @@
                                    style="width: 80px;"
                                    value="@item.Quantity"
                                    min="1"
-                                   max="@item.Quantity"
-                                   onchange="validateQuantity(this, @item.Quantity, @item.EntryId)" />
+                                   @(item.IsPreorder ? "" : $"max=\"{item.MaxQuantity}\"")
+                                   onchange="validateQuantity(this, @(item.MaxQuantity), @item.EntryId, @(item.IsPreorder.ToString().ToLower()))" />
+
 
 
                         </td>
@@ -180,14 +194,19 @@
         }
     }
 
-    function validateQuantity(input, max, entryId) {
+    function validateQuantity(input, max, entryId, isPreorder = false) {
         let value = parseInt(input.value);
-        if (value > max) {
+        if (!isPreorder && value > max) {
             alert(`Максимальна кількість для цього товару: ${max}`);
             input.value = max;
             value = max;
         }
+        if (value < 1 || isNaN(value)) {
+            input.value = 1;
+            value = 1;
+        }
         updateQuantity(entryId, value);
     }
+
 
 </script>

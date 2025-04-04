@@ -35,9 +35,10 @@ namespace Agromarket.Controllers
             return View(cart);
         }
 
+        
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult AddToCart(int entryId, int quantity = 1)
+        public IActionResult AddToCart(int entryId, int quantity = 1, bool isPreorder = false, DateTime? preorderDate = null)
         {
             var entry = _context.WarehouseEntries
                 .Include(e => e.Product)
@@ -50,19 +51,30 @@ namespace Agromarket.Controllers
             }
 
             var cart = GetCart();
+
+            bool cartContainsPreorder = cart.Any(i => i.IsPreorder);
+            bool addingPreorder = entry.Quantity == 0 && entry.IsAvailableForPreorder;
+
+            if (cart.Any())
+            {
+                if (cartContainsPreorder && !addingPreorder)
+                {
+                    TempData["StockError"] = "У кошику вже є передзамовлення. Завершіть його перед додаванням інших товарів.";
+                    return RedirectToAction("Index");
+                }
+
+                if (!cartContainsPreorder && addingPreorder)
+                {
+                    TempData["StockError"] = "У кошику вже є звичайні товари. Завершіть замовлення перед додаванням передзамовлення.";
+                    return RedirectToAction("Index");
+                }
+            }
+
             var existingItem = cart.FirstOrDefault(p => p.EntryId == entryId);
 
             if (existingItem != null)
             {
-                if (existingItem.Quantity + quantity <= entry.Quantity || entry.IsAvailableForPreorder)
-                {
-                    existingItem.Quantity += quantity;
-                }
-                else
-                {
-                    TempData["StockError"] = $"Максимальна кількість '{entry.Product.Name}' у кошику: {entry.Quantity}.";
-                    return RedirectToAction("Index");
-                }
+                existingItem.Quantity += quantity;
             }
             else
             {
@@ -75,13 +87,16 @@ namespace Agromarket.Controllers
                     Quantity = quantity,
                     Unit = entry.Product.Unit,
                     ImageBase64 = entry.Product.ImageData != null ? Convert.ToBase64String(entry.Product.ImageData) : null,
-                    MaxQuantity = entry.Quantity
+                    MaxQuantity = entry.Quantity,
+                    IsPreorder = addingPreorder,
+                    PreorderDate = preorderDate
                 });
             }
 
             SaveCart(cart);
             return RedirectToAction("Index");
         }
+
 
         public IActionResult ProceedToCheckout()
         {
