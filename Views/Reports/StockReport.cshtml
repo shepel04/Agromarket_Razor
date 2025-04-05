@@ -1,0 +1,39 @@
+﻿@model Agromarket.Controllers.StockSummary
+@{
+    ViewData["Title"] = "Звіт по залишках на складі";
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-success">🏬 Звіт по залишках на складі</h2>
+
+    <div class="mb-4">
+        <p><strong>Загальна кількість типів товарів:</strong> @Model.TotalProductTypes</p>
+        <p><strong>Загальна сума залишків:</strong> @Model.TotalStockValue.ToString("0.00") грн</p>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-success text-center">
+            <tr>
+                <th>Категорія</th>
+                <th>Типів товарів</th>
+                <th>Загальна кількість</th>
+                <th>Сума</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.CategoryDetails)
+            {
+                <tr>
+                    <td>@row.Category</td>
+                    <td class="text-center">@row.ProductCount</td>
+                    <td class="text-center">@row.TotalQuantity</td>
+                    <td class="text-end">@row.TotalValue.ToString("0.00") грн</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-secondary mt-4">← Назад до списку звітів</a>
+</div>

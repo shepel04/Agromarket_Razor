@@ -24,12 +24,6 @@
                     <a asp-controller="Reports" asp-action="SalesReport" class="btn btn-outline-success btn-sm">
                         Переглянути
                     </a>
-                    <a asp-action="ExportSalesReport"
-                       asp-route-startDate="@ViewBag.StartDate?.ToString("yyyy-MM-dd")"
-                       asp-route-endDate="@ViewBag.EndDate?.ToString("yyyy-MM-dd")"
-                       class="btn btn-success btn-sm">
-                        📥 Excel
-                    </a>
                 </div>
             </td>
 
@@ -39,7 +33,7 @@
             <td>Залишки на складі</td>
             <td>Поточні залишки товарів на складах</td>
             <td>
-                <a asp-controller="StockReport" asp-action="Stock" class="btn btn-outline-success btn-sm">
+                <a asp-controller="Reports" asp-action="StockReport" class="btn btn-outline-success btn-sm">
                     Переглянути
                 </a>
             </td>

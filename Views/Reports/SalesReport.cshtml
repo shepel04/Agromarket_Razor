@@ -19,7 +19,7 @@
         </div>
         <div class="col-md-4 d-flex align-items-end gap-2">
             <button type="submit" name="action" value="generate" class="btn btn-success w-100">🔍 Згенерувати звіт</button>
-            <button type="button" onclick="downloadExcel()" class="btn btn-outline-success w-100">📥 Excel</button>
+            @*<button type="button" onclick="downloadExcel()" class="btn btn-outline-success w-100">📥 Excel</button>*@
 
         </div>
     </form>
@@ -48,6 +48,7 @@
                     <th>Кількість</th>
                     <th>Одиниця</th>
                     <th>Сума продажу</th>
+                    <th>Чистий прибуток</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -58,10 +59,25 @@
                         <td class="text-center">@item.TotalQuantity</td>
                         <td class="text-center">@item.Unit</td>
                         <td class="text-end">@item.TotalRevenue.ToString("0.00") грн</td>
+                        <td class="text-end">@item.Profit.ToString("0.00") грн</td>
                     </tr>
                 }
                 </tbody>
+                @{
+                    var totalSales = Model.Sum(r => r.TotalRevenue);
+                    var totalProfit = Model.Sum(x => x.Profit);
+                }
+                
+
+                <tfoot>
+                <tr class="table-success fw-bold">
+                    <td colspan="3" class="text-end">Загальна сума:</td>
+                    <td class="text-end">@totalSales.ToString("0.00") грн</td>
+                    <td class="text-end">@totalProfit.ToString("0.00") грн</td>
+                </tr>
+                </tfoot>
             </table>
+            
         </div>
     }
 
@@ -96,14 +112,12 @@
             const start = document.getElementById("startDate").value;
             const end = document.getElementById("endDate").value;
 
-            const url = `/Reports/SalesReport?startDate=${start}&endDate=${end}&action=export`;
+            let url = '@Url.Action("SalesReport", "Reports")';
+            url += `?startDate=${encodeURIComponent(start)}&endDate=${encodeURIComponent(end)}&action=export`;
 
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", "");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            console.log("Downloading Excel from URL:", url); 
+
+            window.location.href = url; 
         }
     </script>
 }

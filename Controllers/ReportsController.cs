@@ -29,27 +29,44 @@ namespace Agromarket.Controllers
             return View();
         }
         
+        [HttpGet]
         public IActionResult SalesReport(DateTime? startDate, DateTime? endDate, string action)
         {
-            var orderItems = _context.OrderItems
+            var orderItemsQuery = _context.OrderItems
                 .Include(o => o.Order)
-                .Where(o => o.Order.Status == OrderStatus.Виконано)
-                .AsQueryable();
+                .Where(o => o.Order.Status == OrderStatus.Виконано);
 
             if (startDate.HasValue)
-                orderItems = orderItems.Where(o => o.Order.OrderDate >= DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc));
+                orderItemsQuery = orderItemsQuery.Where(o => o.Order.OrderDate >= DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc));
 
             if (endDate.HasValue)
-                orderItems = orderItems.Where(o => o.Order.OrderDate <= DateTime.SpecifyKind(endDate.Value.AddDays(1).AddSeconds(-1), DateTimeKind.Utc));
+                orderItemsQuery = orderItemsQuery.Where(o => o.Order.OrderDate <= DateTime.SpecifyKind(endDate.Value.AddDays(1).AddSeconds(-1), DateTimeKind.Utc));
+
+            var orderItems = orderItemsQuery.ToList(); // ⬅️ Спочатку виконуємо запит
+
+            var productCosts = _context.WarehouseEntries
+                .GroupBy(e => e.ProductId)
+                .Select(g => new
+                {
+                    ProductId = g.Key,
+                    AvgCost = g.Average(e => e.PurchasePrice)
+                })
+                .ToDictionary(e => e.ProductId, e => e.AvgCost);
 
             var result = orderItems
-                .GroupBy(o => new { o.ProductName, o.Unit })
-                .Select(g => new SalesReportRow
+                .GroupBy(o => new { o.ProductId, o.ProductName, o.Unit })
+                .Select(g =>
                 {
-                    ProductName = g.Key.ProductName,
-                    Unit = g.Key.Unit,
-                    TotalQuantity = g.Sum(x => x.Quantity),
-                    TotalRevenue = g.Sum(x => x.Quantity * x.Price)
+                    decimal avgCost = productCosts.ContainsKey(g.Key.ProductId) ? productCosts[g.Key.ProductId] : 0;
+
+                    return new SalesReportRow
+                    {
+                        ProductName = g.Key.ProductName,
+                        Unit = g.Key.Unit,
+                        TotalQuantity = g.Sum(x => x.Quantity),
+                        TotalRevenue = g.Sum(x => x.Quantity * x.Price),
+                        TotalCost = g.Sum(x => x.Quantity) * avgCost
+                    };
                 })
                 .OrderByDescending(r => r.TotalRevenue)
                 .ToList();
@@ -59,51 +76,72 @@ namespace Agromarket.Controllers
 
             if (action == "export")
             {
-                using var workbook = new XLWorkbook();
-                var worksheet = workbook.Worksheets.Add("Звіт продажів");
-
-                worksheet.Cell(1, 1).Value = "Товар";
-                worksheet.Cell(1, 2).Value = "Кількість";
-                worksheet.Cell(1, 3).Value = "Одиниця";
-                worksheet.Cell(1, 4).Value = "Сума продажу";
-
-                for (int i = 0; i < result.Count; i++)
-                {
-                    worksheet.Cell(i + 2, 1).Value = result[i].ProductName;
-                    worksheet.Cell(i + 2, 2).Value = result[i].TotalQuantity;
-                    worksheet.Cell(i + 2, 3).Value = result[i].Unit;
-                    worksheet.Cell(i + 2, 4).Value = result[i].TotalRevenue;
-                }
-
-                using var stream = new MemoryStream();
-                workbook.SaveAs(stream);
-                stream.Position = 0;
-
-                var fileName = $"SalesReport_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-                return File(stream.ToArray(),
-                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            fileName);
+                
             }
 
-            // Якщо не експорт — просто показати звіт
             return View(result);
         }
+
+
+
+        [HttpGet]
+        public IActionResult StockReport()
+        {
+            var entries = _context.WarehouseEntries
+                .Include(e => e.Product)
+                .Where(e => e.Quantity > 0)
+                .ToList();
+
+            var summary = new StockSummary
+            {
+                TotalProductTypes = entries.Select(e => e.ProductId).Distinct().Count(),
+                TotalStockValue = entries.Sum(e => e.PurchasePrice * e.Quantity),
+                CategoryDetails = entries
+                    .GroupBy(e => e.Product.Category)
+                    .Select(g => new StockReportRow
+                    {
+                        Category = g.Key,
+                        ProductCount = g.Select(e => e.ProductId).Distinct().Count(),
+                        TotalQuantity = g.Sum(e => e.Quantity),
+                        TotalValue = g.Sum(e => e.PurchasePrice * e.Quantity)
+                    })
+                    .OrderByDescending(r => r.TotalValue)
+                    .ToList()
+            };
+
+            return View(summary);
+        }
+
+
+
+
     }
     
 
     public class SalesReportRow
     {
-        public int ProductId { get; set; }  
         public string ProductName { get; set; }
         public int TotalQuantity { get; set; }
         public decimal TotalRevenue { get; set; }
+        public decimal TotalCost { get; set; }    
+        public decimal Profit => TotalRevenue - TotalCost;
         public string Unit { get; set; }
     }
 
+    
     public class StockReportRow
     {
-        public string ProductName { get; set; }
+        public string Category { get; set; }
+        public int ProductCount { get; set; }
         public int TotalQuantity { get; set; }
-        public string Unit { get; set; }
+        public decimal TotalValue { get; set; }
     }
+
+    public class StockSummary
+    {
+        public int TotalProductTypes { get; set; }
+        public decimal TotalStockValue { get; set; }
+        public List<StockReportRow> CategoryDetails { get; set; }
+    }
+
 }
