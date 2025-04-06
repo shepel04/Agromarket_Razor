@@ -22,6 +22,7 @@
         <th>Дії</th>
         <th>Передзамовлення</th>
         <th>Управління</th>
+        <th>Акції</th>
     </tr>
     </thead>
     <tbody>
@@ -36,24 +37,32 @@
             <td>@entry.Product.Name</td>
             <td>@entry.Quantity</td>
             <td>@entry.PurchasePrice.ToString("0.00") грн</td>
-            <td>@(entry.SellingPrice?.ToString("0.00") ?? "-") грн</td>
+            <td>
+                @(entry.SellingPrice?.ToString("0.00") ?? "-") грн
+                @if (entry.HasDiscount && entry.DiscountedPrice.HasValue)
+                {
+                    <div>
+                        <span class="badge bg-warning text-dark">Знижка: @entry.DiscountPercent% → @entry.DiscountedPrice грн</span>
+                    </div>
+                }
+            </td>
             <td>@entry.ReceivedDate.ToShortDateString()</td>
             <td>@entry.ShelfLifeWeeks тиж.</td>
             <td>
-                    <span class="@shelfColor">
-                        @if (entry.ExpirationDate == null)
-                        {
-                            <text>—</text>
-                        }
-                        else if (daysLeft > 0)
-                        {
-                            <text>@((int)daysLeft) дн.</text>
-                        }
-                        else
-                        {
-                            <text>Закінчився</text>
-                        }
-                    </span>
+                <span class="@shelfColor">
+                    @if (entry.ExpirationDate == null)
+                    {
+                        <text>—</text>
+                    }
+                    else if (daysLeft > 0)
+                    {
+                        <text>@((int)daysLeft) дн.</text>
+                    }
+                    else
+                    {
+                        <text>Закінчився</text>
+                    }
+                </span>
             </td>
             <td>
                 @if (entry.Quantity > 0)
@@ -76,6 +85,7 @@
                        data-entry-id="@entry.Id"
                        @(entry.IsAvailableForPreorder ? "checked" : "") />
             </td>
+            
             <td>
                 <form asp-controller="Warehouse" asp-action="DeleteEntry" method="post" onsubmit="return confirm('Ви дійсно хочете видалити надходження?')">
                     @Html.AntiForgeryToken()
@@ -120,10 +130,52 @@
                     </div>
                 }
             </td>
+            <td>
+                <button type="button"
+                        class="btn btn-sm btn-outline-warning mt-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#discountModal-@entry.Id">
+                    💸 Знижка
+                </button>
+            </td>
+            <div class="modal fade" id="discountModal-@entry.Id" tabindex="-1" aria-labelledby="discountModalLabel-@entry.Id" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form asp-controller="Warehouse" asp-action="ApplyDiscount" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="entryId" value="@entry.Id" />
+                            <div class="modal-header bg-warning">
+                                <h5 class="modal-title text-dark">Застосувати знижку для @entry.Product.Name</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Відсоток знижки (%)</label>
+                                    <input type="number" class="form-control" name="discountPercent" min="1" max="100" required value="@entry.DiscountPercent?.ToString("0")" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Початок дії</label>
+                                    <input type="date" class="form-control" name="discountStartDate" value="@entry.DiscountStartDate?.ToString("yyyy-MM-dd")" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Кінець дії</label>
+                                    <input type="date" class="form-control" name="discountEndDate" value="@entry.DiscountEndDate?.ToString("yyyy-MM-dd")" />
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-success">💾 Застосувати</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
         </tr>
     }
     </tbody>
 </table>
+
+
 
 <div class="modal fade" id="newReceiptModal" tabindex="-1" aria-labelledby="newReceiptModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">

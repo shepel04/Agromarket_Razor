@@ -27,6 +27,26 @@ namespace Agromarket.Models
         public DateTime? ExpirationDate { get; set; }
         
         public DateTime? ExpectedRestockDate { get; set; }
+        
+        public bool HasDiscount { get; set; } = false;
+
+        [Range(0, 100)]
+        public decimal? DiscountPercent { get; set; }
+
+        public DateTime? DiscountStartDate { get; set; }
+        public DateTime? DiscountEndDate { get; set; }
+
+        public decimal? DiscountedPrice
+        {
+            get
+            {
+                if (HasDiscount && DiscountPercent.HasValue && SellingPrice.HasValue)
+                {
+                    return Math.Round(SellingPrice.Value * (1 - DiscountPercent.Value / 100), 2);
+                }
+                return null;
+            }
+        }
 
     }
 }

@@ -1,0 +1,73 @@
+﻿@model List<Agromarket.Controllers.DemandForecastRow>
+
+@{
+    ViewData["Title"] = "Прогноз попиту";
+}
+
+<h2 class="text-success mb-4">📦 Прогноз попиту на товари</h2>
+
+<form method="get" asp-action="Index" class="row mb-4 g-2">
+    <div class="col-md-4">
+        <select class="form-select" name="category">
+            <option value="">Усі категорії</option>
+            @foreach (var cat in ViewBag.Categories as List<string>)
+            {
+                <option value="@cat" selected="@(Context.Request.Query["category"] == cat ? "selected" : null)">
+                    @cat
+                </option>
+            }
+        </select>
+    </div>
+    <div class="col-md-4">
+        <select class="form-select" name="productId">
+            <option value="">Усі товари</option>
+            @foreach (var p in ViewBag.Products as List<Agromarket.Models.Product>)
+            {
+                <option value="@p.Id" selected="@(Context.Request.Query["productId"] == p.Id.ToString() ? "selected" : null)">
+                    @p.Name
+                </option>
+            }
+        </select>
+    </div>
+    <div class="col-md-4">
+        <button type="submit" class="btn btn-success w-100">🔍 Застосувати фільтри</button>
+    </div>
+</form>
+
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">Прогнозів не знайдено для обраних параметрів.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle text-center">
+            <thead class="table-success">
+            <tr>
+                <th>Товар</th>
+                <th>Категорія</th>
+                <th>Сезонні місяці</th>
+                <th>Продано в сезон</th>
+                <th>Середнє/міс</th>
+                <th>Місяців залишилось</th>
+                <th>Рекомендовано замовити</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model)
+            {
+                <tr>
+                    <td>@row.ProductName</td>
+                    <td>@row.Category</td>
+                    <td>@row.TotalSoldThisSeason / @row.RemainingSeasonMonths</td>
+                    <td>@row.TotalSoldThisSeason</td>
+                    <td>@row.AvgPerMonth</td>
+                    <td>@row.RemainingSeasonMonths</td>
+                    <td class="fw-bold text-success">@row.ForecastedOrderQuantity @row.Unit</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

@@ -66,13 +66,31 @@
             </div>
 
             <div class="col-md-6">
-                <h2 class="mb-3 text-center">@product.Name</h2>
+                <h2 class="mb-3 text-center position-relative d-inline-block">
+                    @product.Name
+                    @if (Model.HasDiscount && Model.DiscountPercent.HasValue && Model.DiscountedPrice.HasValue)
+                    {
+                        <span class="badge bg-danger ms-2 fs-6">
+                            Знижка @Model.DiscountPercent.Value.ToString("0")%
+                        </span>
+                    }
+                </h2>
+
 
                 <p><strong>Ціна:</strong>
-                    <span class="text-danger fs-4">
-                        @(Model.SellingPrice.HasValue ? Model.SellingPrice.Value.ToString("0.00") + " грн" : "Не вказано")
-                    </span>
+                    @if (Model.HasDiscount && Model.DiscountedPrice.HasValue)
+                    {
+                        <span class="text-danger fs-4 fw-bold">@Model.DiscountedPrice.Value.ToString("0.00") грн</span><br />
+                        <small class="text-muted text-decoration-line-through">@Model.SellingPrice?.ToString("0.00") грн</small>
+                    }
+                    else
+                    {
+                        <span class="text-danger fs-4">
+                            @(Model.SellingPrice.HasValue ? Model.SellingPrice.Value.ToString("0.00") + " грн" : "Не вказано")
+                        </span>
+                    }
                 </p>
+
 
                 <p><strong>Наявність:</strong>
                     @if (Model.Quantity > 0)
@@ -102,7 +120,7 @@
                         <input type="hidden" name="entryId" value="@Model.Id" />
                         <input type="hidden" name="productId" value="@product.Id" />
                         <input type="hidden" name="name" value="@product.Name" />
-                        <input type="hidden" name="price" value="@Model.SellingPrice" />
+                        <input type="hidden" name="price" value="@(Model.HasDiscount ? Model.DiscountedPrice : Model.SellingPrice)" />
                         <input type="hidden" name="unit" value="@product.Unit" />
                         <input type="hidden" name="imageBase64" value="@base64" />
 

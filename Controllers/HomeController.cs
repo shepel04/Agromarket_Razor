@@ -21,16 +21,25 @@ namespace Agromarket.Controllers
 
         public IActionResult Index()
         {
-            var entries = _context.WarehouseEntries
+            var discountedEntries = _context.WarehouseEntries
                 .Include(e => e.Product)
-                .AsEnumerable()
-                .Where(e => e.Quantity > 0 || e.IsAvailableForPreorder)
-                .GroupBy(e => e.ProductId)
-                .Select(g => g.OrderByDescending(e => e.Quantity > 0).ThenBy(e => e.ExpirationDate).First())
+                .Where(e => e.HasDiscount && e.Quantity > 0)
                 .ToList();
 
-            return View(entries);
+            var categories = _context.WarehouseEntries
+                .Include(e => e.Product)
+                .Where(e => e.Quantity > 0)
+                .Select(e => e.Product.Category)
+                .Where(c => !string.IsNullOrEmpty(c))
+                .Distinct()
+                .ToList();
+
+            ViewBag.Categories = categories;
+
+            return View(discountedEntries);
         }
+
+
         
 
         public IActionResult Privacy()

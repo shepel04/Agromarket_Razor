@@ -279,5 +279,23 @@ namespace Agromarket.Controllers.Warehouse
             public int EntryId { get; set; }
             public bool IsAvailable { get; set; }
         }
+        
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApplyDiscount(int entryId, decimal discountPercent, DateTime? discountStartDate, DateTime? discountEndDate)
+        {
+            var entry = await _context.WarehouseEntries.FindAsync(entryId);
+            if (entry == null) return NotFound();
+
+            entry.HasDiscount = true;
+            entry.DiscountPercent = discountPercent;
+            entry.DiscountStartDate = discountStartDate;
+            entry.DiscountEndDate = discountEndDate;
+
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction("Warehouse");
+        }
+
     }
 }

@@ -79,15 +79,35 @@
                     var isAvailable = entry.Quantity > 0 || entry.IsAvailableForPreorder;
 
                     <div class="col-6 col-md-4 col-lg-3 mb-4 animate__animated animate__fadeIn">
-                        <div class="card product-card h-100">
-                            <a href="@Url.Action("Details", "Product", new { entryId = entry.Id })" class="card-link text-decoration-none">
+                        <div class="card product-card h-100 d-flex flex-column position-relative">
+                            @* Шильдик зі знижкою *@
+                            @if (entry.HasDiscount && entry.DiscountPercent.HasValue && entry.DiscountedPrice.HasValue)
+                            {
+                                <span class="badge bg-danger position-absolute top-0 end-0 m-2 shadow-sm">
+                                    Знижка @entry.DiscountPercent.Value.ToString("0")%
+                                </span>
+                            }
+
+                            <a href="@Url.Action("Details", "Product", new { entryId = entry.Id })" class="card-link text-decoration-none flex-grow-1 d-flex flex-column">
                                 <div class="image-container">
                                     <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name">
                                 </div>
-                                <div class="card-body text-center">
+                                <div class="card-body text-center d-flex flex-column">
                                     <h6 class="card-title text-truncate">@product.Name</h6>
-                                    <p class="card-text price">@entry.SellingPrice?.ToString("0.00") грн</p>
-                                    <p class="text-muted small">@availabilityText</p>
+
+                                    @if (entry.HasDiscount && entry.DiscountedPrice.HasValue)
+                                    {
+                                        <p class="card-text price">
+                                            <span class="text-danger fw-bold">@entry.DiscountedPrice.Value.ToString("0.00") грн</span><br />
+                                            <small class="text-muted text-decoration-line-through">@entry.SellingPrice?.ToString("0.00") грн</small>
+                                        </p>
+                                    }
+                                    else
+                                    {
+                                        <p class="card-text price">@entry.SellingPrice?.ToString("0.00") грн</p>
+                                    }
+
+                                    <p class="text-muted small mt-auto">@availabilityText</p>
                                 </div>
                             </a>
 
@@ -97,13 +117,16 @@
                                     <input type="hidden" name="entryId" value="@entry.Id" />
                                     <input type="hidden" name="productId" value="@product.Id" />
                                     <input type="hidden" name="name" value="@product.Name" />
-                                    <input type="hidden" name="price" value="@entry.SellingPrice" />
+                                    <input type="hidden" name="price" value="@(entry.HasDiscount ? entry.DiscountedPrice : entry.SellingPrice)" />
                                     <input type="hidden" name="unit" value="@product.Unit" />
                                     <input type="hidden" name="imageBase64" value="@base64" />
                                     <button type="submit" class="btn btn-success btn-sm">Додати в кошик</button>
                                 </form>
                             }
                         </div>
+
+
+
                     </div>
                 }
             }
@@ -182,6 +205,9 @@
     .product-card {
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         transition: 0.3s;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
     .product-card:hover {
@@ -193,6 +219,16 @@
         object-fit: contain;
         padding: 10px;
         background-color: #fff;
+    }
+    
+    .card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-link {
+        height: 100%;
     }
 </style>
 

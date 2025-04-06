@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "G475n8U0sSnFwIbAMGeQQGnSSWVx7X17v+KXnrushRs=",
+  "Hash": "TqDG8THxIOJ9nyi3FV1345fupbXlD+/kOZVWI+JH4+8=",
   "Source": "Agromarket",
   "BasePath": "_content/Agromarket",
   "Mode": "Default",
@@ -3293,12 +3293,12 @@
       "OriginalItemSpec": "C:\\Users\\Shepel\\.nuget\\packages\\microsoft.aspnetcore.identity.ui\\9.0.2\\staticwebassets\\V5\\lib\\jquery\\dist\\jquery.min.js"
     },
     {
-      "Identity": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\t6cyqh1qv1-61n19gt1b8.gz",
+      "Identity": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\t6cyqh1qv1-mv0nz2og2u.gz",
       "SourceId": "Agromarket",
       "SourceType": "Discovered",
       "ContentRoot": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\",
       "BasePath": "_content/Agromarket",
-      "RelativePath": "favicon#[.{fingerprint=61n19gt1b8}]?.ico.gz",
+      "RelativePath": "favicon#[.{fingerprint=mv0nz2og2u}]?.ico.gz",
       "AssetKind": "All",
       "AssetMode": "All",
       "AssetRole": "Alternative",
@@ -3307,8 +3307,8 @@
       "RelatedAsset": "D:\\Razor\\Agromarket\\wwwroot\\favicon.ico",
       "AssetTraitName": "Content-Encoding",
       "AssetTraitValue": "gzip",
-      "Fingerprint": "nezsohjtde",
-      "Integrity": "wfFuuYm+Lh6RbCeeiUqxw334b/hIOkp5j9eokGUM1Y0=",
+      "Fingerprint": "o31zof1329",
+      "Integrity": "rIsweEDZaanUPGHYS7nUNXoLv12vhbwVnhSOz9SIK9c=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "D:\\Razor\\Agromarket\\wwwroot\\favicon.ico"
@@ -4063,8 +4063,8 @@
       "RelatedAsset": "",
       "AssetTraitName": "",
       "AssetTraitValue": "",
-      "Fingerprint": "61n19gt1b8",
-      "Integrity": "Jtxf9L+5ITKRc1gIRl4VbUpGkRNfOBXjYTdhJD4facM=",
+      "Fingerprint": "mv0nz2og2u",
+      "Integrity": "ztChEsLbfe7CJPIJH9zQvKUnopopyIYcJUxTS0r6fVU=",
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\favicon.ico"
@@ -6284,167 +6284,6 @@
       ]
     },
     {
-      "Route": "favicon.61n19gt1b8.ico",
-      "AssetFile": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\t6cyqh1qv1-61n19gt1b8.gz",
-      "Selectors": [
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip",
-          "Quality": "0.000405022276"
-        }
-      ],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "2468"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"wfFuuYm+Lh6RbCeeiUqxw334b/hIOkp5j9eokGUM1Y0=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Mon, 10 Mar 2025 15:47:42 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "image/x-icon"
-        },
-        {
-          "Name": "ETag",
-          "Value": "W/\"Jtxf9L+5ITKRc1gIRl4VbUpGkRNfOBXjYTdhJD4facM=\""
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "61n19gt1b8"
-        },
-        {
-          "Name": "label",
-          "Value": "favicon.ico"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-Jtxf9L+5ITKRc1gIRl4VbUpGkRNfOBXjYTdhJD4facM="
-        }
-      ]
-    },
-    {
-      "Route": "favicon.61n19gt1b8.ico",
-      "AssetFile": "D:\\Razor\\Agromarket\\wwwroot\\favicon.ico",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "5430"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "image/x-icon"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"Jtxf9L+5ITKRc1gIRl4VbUpGkRNfOBXjYTdhJD4facM=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Mon, 10 Mar 2025 15:47:42 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "61n19gt1b8"
-        },
-        {
-          "Name": "label",
-          "Value": "favicon.ico"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-Jtxf9L+5ITKRc1gIRl4VbUpGkRNfOBXjYTdhJD4facM="
-        }
-      ]
-    },
-    {
-      "Route": "favicon.61n19gt1b8.ico.gz",
-      "AssetFile": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\t6cyqh1qv1-61n19gt1b8.gz",
-      "Selectors": [],
-      "ResponseHeaders": [
-        {
-          "Name": "Accept-Ranges",
-          "Value": "bytes"
-        },
-        {
-          "Name": "Content-Length",
-          "Value": "2468"
-        },
-        {
-          "Name": "Content-Type",
-          "Value": "image/x-icon"
-        },
-        {
-          "Name": "ETag",
-          "Value": "\"wfFuuYm+Lh6RbCeeiUqxw334b/hIOkp5j9eokGUM1Y0=\""
-        },
-        {
-          "Name": "Last-Modified",
-          "Value": "Mon, 10 Mar 2025 15:47:42 GMT"
-        },
-        {
-          "Name": "Cache-Control",
-          "Value": "max-age=31536000, immutable"
-        },
-        {
-          "Name": "Content-Encoding",
-          "Value": "gzip"
-        },
-        {
-          "Name": "Vary",
-          "Value": "Content-Encoding"
-        }
-      ],
-      "EndpointProperties": [
-        {
-          "Name": "fingerprint",
-          "Value": "61n19gt1b8"
-        },
-        {
-          "Name": "label",
-          "Value": "favicon.ico.gz"
-        },
-        {
-          "Name": "integrity",
-          "Value": "sha256-wfFuuYm+Lh6RbCeeiUqxw334b/hIOkp5j9eokGUM1Y0="
-        }
-      ]
-    },
-    {
       "Route": "favicon.ico",
       "AssetFile": "C:\\Users\\Shepel\\.nuget\\packages\\microsoft.aspnetcore.identity.ui\\9.0.2\\staticwebassets\\favicon.ico",
       "Selectors": [],
@@ -6483,12 +6322,12 @@
     },
     {
       "Route": "favicon.ico",
-      "AssetFile": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\t6cyqh1qv1-61n19gt1b8.gz",
+      "AssetFile": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\t6cyqh1qv1-mv0nz2og2u.gz",
       "Selectors": [
         {
           "Name": "Content-Encoding",
           "Value": "gzip",
-          "Quality": "0.000405022276"
+          "Quality": "0.000026123302"
         }
       ],
       "ResponseHeaders": [
@@ -6498,15 +6337,15 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "2468"
+          "Value": "38279"
         },
         {
           "Name": "ETag",
-          "Value": "\"wfFuuYm+Lh6RbCeeiUqxw334b/hIOkp5j9eokGUM1Y0=\""
+          "Value": "\"rIsweEDZaanUPGHYS7nUNXoLv12vhbwVnhSOz9SIK9c=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 10 Mar 2025 15:47:42 GMT"
+          "Value": "Sun, 06 Apr 2025 07:39:56 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -6526,13 +6365,13 @@
         },
         {
           "Name": "ETag",
-          "Value": "W/\"Jtxf9L+5ITKRc1gIRl4VbUpGkRNfOBXjYTdhJD4facM=\""
+          "Value": "W/\"ztChEsLbfe7CJPIJH9zQvKUnopopyIYcJUxTS0r6fVU=\""
         }
       ],
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-Jtxf9L+5ITKRc1gIRl4VbUpGkRNfOBXjYTdhJD4facM="
+          "Value": "sha256-ztChEsLbfe7CJPIJH9zQvKUnopopyIYcJUxTS0r6fVU="
         }
       ]
     },
@@ -6547,7 +6386,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "5430"
+          "Value": "38925"
         },
         {
           "Name": "Content-Type",
@@ -6555,11 +6394,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"Jtxf9L+5ITKRc1gIRl4VbUpGkRNfOBXjYTdhJD4facM=\""
+          "Value": "\"ztChEsLbfe7CJPIJH9zQvKUnopopyIYcJUxTS0r6fVU=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 10 Mar 2025 15:47:42 GMT"
+          "Value": "Sun, 06 Apr 2025 07:39:56 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -6569,13 +6408,13 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-Jtxf9L+5ITKRc1gIRl4VbUpGkRNfOBXjYTdhJD4facM="
+          "Value": "sha256-ztChEsLbfe7CJPIJH9zQvKUnopopyIYcJUxTS0r6fVU="
         }
       ]
     },
     {
       "Route": "favicon.ico.gz",
-      "AssetFile": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\t6cyqh1qv1-61n19gt1b8.gz",
+      "AssetFile": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\t6cyqh1qv1-mv0nz2og2u.gz",
       "Selectors": [],
       "ResponseHeaders": [
         {
@@ -6584,7 +6423,7 @@
         },
         {
           "Name": "Content-Length",
-          "Value": "2468"
+          "Value": "38279"
         },
         {
           "Name": "Content-Type",
@@ -6592,11 +6431,11 @@
         },
         {
           "Name": "ETag",
-          "Value": "\"wfFuuYm+Lh6RbCeeiUqxw334b/hIOkp5j9eokGUM1Y0=\""
+          "Value": "\"rIsweEDZaanUPGHYS7nUNXoLv12vhbwVnhSOz9SIK9c=\""
         },
         {
           "Name": "Last-Modified",
-          "Value": "Mon, 10 Mar 2025 15:47:42 GMT"
+          "Value": "Sun, 06 Apr 2025 07:39:56 GMT"
         },
         {
           "Name": "Cache-Control",
@@ -6614,7 +6453,168 @@
       "EndpointProperties": [
         {
           "Name": "integrity",
-          "Value": "sha256-wfFuuYm+Lh6RbCeeiUqxw334b/hIOkp5j9eokGUM1Y0="
+          "Value": "sha256-rIsweEDZaanUPGHYS7nUNXoLv12vhbwVnhSOz9SIK9c="
+        }
+      ]
+    },
+    {
+      "Route": "favicon.mv0nz2og2u.ico",
+      "AssetFile": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\t6cyqh1qv1-mv0nz2og2u.gz",
+      "Selectors": [
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip",
+          "Quality": "0.000026123302"
+        }
+      ],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "38279"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"rIsweEDZaanUPGHYS7nUNXoLv12vhbwVnhSOz9SIK9c=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Sun, 06 Apr 2025 07:39:56 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/x-icon"
+        },
+        {
+          "Name": "ETag",
+          "Value": "W/\"ztChEsLbfe7CJPIJH9zQvKUnopopyIYcJUxTS0r6fVU=\""
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "mv0nz2og2u"
+        },
+        {
+          "Name": "label",
+          "Value": "favicon.ico"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-ztChEsLbfe7CJPIJH9zQvKUnopopyIYcJUxTS0r6fVU="
+        }
+      ]
+    },
+    {
+      "Route": "favicon.mv0nz2og2u.ico",
+      "AssetFile": "D:\\Razor\\Agromarket\\wwwroot\\favicon.ico",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "38925"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/x-icon"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"ztChEsLbfe7CJPIJH9zQvKUnopopyIYcJUxTS0r6fVU=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Sun, 06 Apr 2025 07:39:56 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "mv0nz2og2u"
+        },
+        {
+          "Name": "label",
+          "Value": "favicon.ico"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-ztChEsLbfe7CJPIJH9zQvKUnopopyIYcJUxTS0r6fVU="
+        }
+      ]
+    },
+    {
+      "Route": "favicon.mv0nz2og2u.ico.gz",
+      "AssetFile": "D:\\Razor\\Agromarket\\obj\\Debug\\net9.0\\compressed\\t6cyqh1qv1-mv0nz2og2u.gz",
+      "Selectors": [],
+      "ResponseHeaders": [
+        {
+          "Name": "Accept-Ranges",
+          "Value": "bytes"
+        },
+        {
+          "Name": "Content-Length",
+          "Value": "38279"
+        },
+        {
+          "Name": "Content-Type",
+          "Value": "image/x-icon"
+        },
+        {
+          "Name": "ETag",
+          "Value": "\"rIsweEDZaanUPGHYS7nUNXoLv12vhbwVnhSOz9SIK9c=\""
+        },
+        {
+          "Name": "Last-Modified",
+          "Value": "Sun, 06 Apr 2025 07:39:56 GMT"
+        },
+        {
+          "Name": "Cache-Control",
+          "Value": "max-age=31536000, immutable"
+        },
+        {
+          "Name": "Content-Encoding",
+          "Value": "gzip"
+        },
+        {
+          "Name": "Vary",
+          "Value": "Content-Encoding"
+        }
+      ],
+      "EndpointProperties": [
+        {
+          "Name": "fingerprint",
+          "Value": "mv0nz2og2u"
+        },
+        {
+          "Name": "label",
+          "Value": "favicon.ico.gz"
+        },
+        {
+          "Name": "integrity",
+          "Value": "sha256-rIsweEDZaanUPGHYS7nUNXoLv12vhbwVnhSOz9SIK9c="
         }
       ]
     },

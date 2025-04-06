@@ -83,22 +83,27 @@
 
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li><a class="nav-link" asp-controller="Warehouse" asp-action="Catalog"><i class="fas fa-th"></i> Каталог</a></li>
+                    
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="mainNavDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-bars"></i> Меню
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="mainNavDropdown">
                             <li><a class="dropdown-item" asp-controller="Home" asp-action="Index"><i class="fas fa-home"></i> Головна</a></li>
-                            <li><a class="dropdown-item" asp-controller="Warehouse" asp-action="Catalog"><i class="fas fa-th"></i> Каталог товарів</a></li>
-                            @if (User.IsInRole("admin")) {
+                            @if (User.IsInRole("admin"))
+                            {
                                 <li><a class="dropdown-item" asp-controller="Admin" asp-action="Index"><i class="fas fa-cogs"></i> Адмін Панель</a></li>
                             }
-                            @if (User.IsInRole("warehousemanager") || User.IsInRole("admin")) {
+                            @if (User.IsInRole("warehousemanager") || User.IsInRole("admin"))
+                            {
                                 <li><a class="dropdown-item" asp-controller="Product" asp-action="ProductList"><i class="fas fa-list"></i> Список товарів</a></li>
                                 <li><a class="dropdown-item" asp-controller="Warehouse" asp-action="Warehouse"><i class="fas fa-warehouse"></i> Складський облік</a></li>
                                 <li><a class="dropdown-item" asp-controller="Warehouse" asp-action="StockHistory"><i class="fas fa-history"></i> Історія операцій</a></li>
+                                <li><a class="dropdown-item" asp-controller="DemandForecast" asp-action="Index"><i class="fas fa-chart-bar"></i> Прогноз поставок</a></li>
                             }
-                            @if (User.IsInRole("admin") || User.IsInRole("clientmanager")) {
+                            @if (User.IsInRole("admin") || User.IsInRole("clientmanager"))
+                            {
                                 <li><a class="dropdown-item" asp-controller="Order" asp-action="OrderList"><i class="fas fa-box"></i> Замовлення</a></li>
                                 <li><a class="dropdown-item" asp-controller="Reports" asp-action=""><i class="fas fa-chart-line"></i> Звіти</a></li>
                             }

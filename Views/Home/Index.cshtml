@@ -22,79 +22,94 @@
     };
 }
 
-<h2 class="text-center mb-4">Популярні товари</h2>
+<div class="container mt-4 pb-5">
+    <div class="row">
+        <!-- Категорії -->
+        <div class="col-12 col-md-6 mb-5">
+            <h3 class="text-center mb-3">📦 Категорії</h3>
 
-@if (Model.Any())
-{
-    <div id="productCarousel" class="carousel slide" data-bs-ride="carousel">
-        <div class="carousel-inner">
-            @for (int i = 0; i < Model.Count(); i++)
+            @if (ViewBag.Categories != null)
             {
-                var entry = Model.ElementAt(i);
-                var product = entry.Product;
-                var base64 = product.ImageData != null ? Convert.ToBase64String(product.ImageData) : null;
-                var imgSrc = base64 != null ? $"data:image/png;base64,{base64}" : "/img/no-image.png";
-
-                <div class="carousel-item @(i == 0 ? "active" : "")">
-                    <div class="card text-center">
-                        <a href="@Url.Action("Details", "Product", new { entryId = entry.Id })">
-                            <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name" />
-                        </a>
-                        <div class="card-body">
-                            <h5 class="card-title">@product.Name</h5>
-                            <p class="card-text">@product.Description</p>
-                            <p class="card-text"><strong>Ціна:</strong> @(entry.SellingPrice?.ToString("0.00") ?? "Не вказано") грн</p>
-                            <p class="text-muted">В наявності: @(entry.Quantity > 0 ? $"{entry.Quantity} {product.Unit}" : "Під замовлення")</p>
-                            <a href="@Url.Action("Details", "Product", new { entryId = entry.Id })" class="btn btn-primary">Детальніше</a>
+                <div class="row">
+                    @foreach (var category in (List<string>)ViewBag.Categories)
+                    {
+                        <div class="col-6 col-sm-4 col-md-6 col-lg-6 mb-3">
+                            <a href="@Url.Action("Catalog", "Warehouse", new { category = category })" class="category-card">
+                                <div class="category-icon">
+                                    @(categoryIcons.ContainsKey(category) ? categoryIcons[category] : "🛍️")
+                                </div>
+                                <div class="category-name">@category</div>
+                            </a>
                         </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Карусель -->
+        <div class="col-12 col-md-6">
+            <h3 class="text-center mb-3">🔥 Акційні товари</h3>
+
+            @if (Model.Any())
+            {
+                <div id="productCarousel" class="carousel slide small-carousel" data-bs-ride="carousel">
+                    <div class="carousel-inner">
+                        @for (int i = 0; i < Model.Count(); i++)
+                        {
+                            var entry = Model.ElementAt(i);
+                            var product = entry.Product;
+                            var base64 = product.ImageData != null ? Convert.ToBase64String(product.ImageData) : null;
+                            var imgSrc = base64 != null ? $"data:image/png;base64,{base64}" : "/img/no-image.png";
+
+                            <div class="carousel-item @(i == 0 ? "active" : "")">
+                                <div class="card mx-auto" style="max-width: 300px;">
+                                    <div class="position-relative">
+                                        <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name" />
+                                        <span class="position-absolute top-0 start-0 badge bg-danger m-2 fs-6">
+                                            Знижка @(entry.DiscountPercent)% 
+                                        </span>
+                                    </div>
+                                    <div class="card-body text-center p-2">
+                                        <h6 class="card-title mb-1">@product.Name</h6>
+                                        <p class="card-text small text-muted">@product.Description</p>
+                                        <p class="card-text mb-2">
+                                            <span class="text-decoration-line-through text-muted me-2">
+                                                @entry.SellingPrice?.ToString("0.00") грн
+                                            </span>
+                                            <span class="text-danger fw-bold">
+                                                @entry.DiscountedPrice?.ToString("0.00") грн
+                                            </span>
+                                        </p>
+                                        <a href="@Url.Action("Details", "Product", new { entryId = entry.Id })" class="btn btn-success btn-sm">
+                                            Переглянути
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </div>
+
+                    <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon"></span>
+                        <span class="visually-hidden">Попередній</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon"></span>
+                        <span class="visually-hidden">Наступний</span>
+                    </button>
                 </div>
             }
-        </div>
-
-        <button class="carousel-control-prev" type="button" data-bs-target="#productCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Попередній</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#productCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Наступний</span>
-        </button>
-    </div>
-}
-else
-{
-    <p class="text-center text-muted">Наразі немає товарів у складському обліку.</p>
-}
-
-@if (Model.Any())
-{
-    <h3 class="text-center mt-5">Категорії товарів</h3>
-    <div class="container">
-        <div class="row justify-content-center">
-            @foreach (var category in Model.Select(e => e.Product.Category).Where(c => !string.IsNullOrEmpty(c)).Distinct())
+            else
             {
-                <div class="col-6 col-sm-4 col-md-3 col-lg-2 mb-4">
-                    <a href="@Url.Action("Catalog", "Warehouse", new { category = category })" class="category-card">
-                        <div class="category-icon">
-                            @(categoryIcons.ContainsKey(category) ? categoryIcons[category] : "🛍️")
-                        </div>
-                        <div class="category-name">@category</div>
-                    </a>
-                </div>
+                <p class="text-center text-muted">Наразі акційних товарів немає.</p>
             }
         </div>
     </div>
-}
+</div>
 
 <style>
-    .carousel {
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
     .product-image {
-        max-height: 300px;
+        max-height: 200px;
         object-fit: contain;
         padding: 10px;
         background: #ffffff;
@@ -127,6 +142,7 @@ else
         font-weight: bold;
         transition: 0.3s;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        height: 100%;
     }
 
     .category-card:hover {
@@ -142,5 +158,13 @@ else
     .category-name {
         font-size: 16px;
         text-align: center;
+    }
+
+    .small-carousel .carousel-item {
+        padding: 10px 0;
+    }
+
+    .pb-5 {
+        padding-bottom: 5rem !important;
     }
 </style>

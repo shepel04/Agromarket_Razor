@@ -83,7 +83,9 @@ namespace Agromarket.Controllers
                     EntryId = entry.Id,
                     ProductId = entry.ProductId,
                     Name = entry.Product.Name,
-                    Price = entry.SellingPrice ?? 0,
+                    Price = entry.HasDiscount && entry.DiscountedPrice.HasValue
+                        ? entry.DiscountedPrice.Value
+                        : (entry.SellingPrice ?? 0),
                     Quantity = quantity,
                     Unit = entry.Product.Unit,
                     ImageBase64 = entry.Product.ImageData != null ? Convert.ToBase64String(entry.Product.ImageData) : null,
