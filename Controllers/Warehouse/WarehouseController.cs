@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Agromarket.Controllers.Warehouse
 {
-    [Authorize(Roles = "warehousemanager,admin")]
+  
     public class WarehouseController : Controller
     {
         private readonly ApplicationDbContext _context;

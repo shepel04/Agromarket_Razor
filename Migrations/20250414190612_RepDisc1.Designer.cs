@@ -3,6 +3,7 @@ using System;
 using Agromarket.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Agromarket.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250414190612_RepDisc1")]
+    partial class RepDisc1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -164,127 +167,6 @@ namespace Agromarket.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("StockTransactions");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.Supplier", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ContactEmail")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("TelegramBotToken")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TelegramChannelId")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Suppliers");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.SupplyOrder", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("ExpectedDeliveryDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("OrderDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("SupplierId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SupplierId");
-
-                    b.ToTable("SupplyOrders");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.SupplyOrderItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("PurchasePrice")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SupplyOrderId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("SupplyOrderId");
-
-                    b.ToTable("SupplyOrderItem");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.SupplyProduct", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("InStock")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SupplierId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("SupplierId");
-
-                    b.ToTable("SupplyProducts");
                 });
 
             modelBuilder.Entity("Agromarket.Models.WarehouseEntry", b =>
@@ -599,55 +481,6 @@ namespace Agromarket.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("Agromarket.Models.SupplyOrder", b =>
-                {
-                    b.HasOne("Agromarket.Models.Supplier", "Supplier")
-                        .WithMany("SupplyOrders")
-                        .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Supplier");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.SupplyOrderItem", b =>
-                {
-                    b.HasOne("Agromarket.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Agromarket.Models.SupplyOrder", "SupplyOrder")
-                        .WithMany("Items")
-                        .HasForeignKey("SupplyOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("SupplyOrder");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.SupplyProduct", b =>
-                {
-                    b.HasOne("Agromarket.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Agromarket.Models.Supplier", "Supplier")
-                        .WithMany("SupplyProducts")
-                        .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Supplier");
-                });
-
             modelBuilder.Entity("Agromarket.Models.WarehouseEntry", b =>
                 {
                     b.HasOne("Agromarket.Models.Product", "Product")
@@ -724,18 +557,6 @@ namespace Agromarket.Migrations
             modelBuilder.Entity("Agromarket.Models.Order", b =>
                 {
                     b.Navigation("OrderItems");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.Supplier", b =>
-                {
-                    b.Navigation("SupplyOrders");
-
-                    b.Navigation("SupplyProducts");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.SupplyOrder", b =>
-                {
-                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

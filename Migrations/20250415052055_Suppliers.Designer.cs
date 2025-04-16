@@ -3,6 +3,7 @@ using System;
 using Agromarket.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Agromarket.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250415052055_Suppliers")]
+    partial class Suppliers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -190,12 +193,6 @@ namespace Agromarket.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("TelegramBotToken")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TelegramChannelId")
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.ToTable("Suppliers");
@@ -256,35 +253,6 @@ namespace Agromarket.Migrations
                     b.HasIndex("SupplyOrderId");
 
                     b.ToTable("SupplyOrderItem");
-                });
-
-            modelBuilder.Entity("Agromarket.Models.SupplyProduct", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("InStock")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("numeric");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SupplierId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("SupplierId");
-
-                    b.ToTable("SupplyProducts");
                 });
 
             modelBuilder.Entity("Agromarket.Models.WarehouseEntry", b =>
@@ -629,25 +597,6 @@ namespace Agromarket.Migrations
                     b.Navigation("SupplyOrder");
                 });
 
-            modelBuilder.Entity("Agromarket.Models.SupplyProduct", b =>
-                {
-                    b.HasOne("Agromarket.Models.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Agromarket.Models.Supplier", "Supplier")
-                        .WithMany("SupplyProducts")
-                        .HasForeignKey("SupplierId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Supplier");
-                });
-
             modelBuilder.Entity("Agromarket.Models.WarehouseEntry", b =>
                 {
                     b.HasOne("Agromarket.Models.Product", "Product")
@@ -729,8 +678,6 @@ namespace Agromarket.Migrations
             modelBuilder.Entity("Agromarket.Models.Supplier", b =>
                 {
                     b.Navigation("SupplyOrders");
-
-                    b.Navigation("SupplyProducts");
                 });
 
             modelBuilder.Entity("Agromarket.Models.SupplyOrder", b =>

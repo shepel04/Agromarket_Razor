@@ -1,0 +1,143 @@
+﻿@model List<Agromarket.Controllers.DiscountSalesReportRow>
+@{
+    ViewData["Title"] = "Продажі за зниженою ціною";
+    var startDate = ViewBag.StartDate as DateTime?;
+    var endDate = ViewBag.EndDate as DateTime?;
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-danger">🔻 Продажі товарів за зниженою ціною</h2>
+
+    <form id="reportForm" method="get" asp-action="DiscountSalesReport" class="row g-3 mb-4">
+        <div class="col-md-4">
+            <label for="startDate" class="form-label">Початкова дата</label>
+            <input type="date" id="startDate" name="startDate" class="form-control" value="@(startDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-md-4">
+            <label for="endDate" class="form-label">Кінцева дата</label>
+            <input type="date" id="endDate" name="endDate" class="form-control" value="@(endDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-md-4 d-flex align-items-end gap-2">
+            <button type="submit" class="btn btn-danger w-100">🔍 Згенерувати звіт</button>
+        </div>
+    </form>
+
+    <div class="mb-4">
+        <span class="me-2 fw-bold text-muted">Швидкий вибір:</span>
+        <button type="button" class="btn btn-outline-danger btn-sm me-2 text-white" onclick="setPreset('day')">Сьогодні</button>
+        <button type="button" class="btn btn-outline-danger btn-sm me-2 text-white" onclick="setPreset('week')">Останній тиждень</button>
+        <button type="button" class="btn btn-outline-danger btn-sm me-2 text-white" onclick="setPreset('month')">Останній місяць</button>
+        <button type="button" class="btn btn-outline-danger btn-sm me-2 text-white" onclick="setPreset('year')">Останній рік</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPreset('all')">Весь час</button>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">За вказаний період продажів зі знижкою не знайдено.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-bordered align-middle">
+                <thead class="table-danger text-center">
+                <tr>
+                    <th>Товар</th>
+                    <th>Кількість</th>
+                    <th>Одиниця</th>
+                    <th>Виручка</th>
+                    <th>Собівартість</th>
+                    <th>Різниця (прибуток / збиток)</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr class="text-end @(item.IsLoss ? "table-warning" : "table-success")">
+                        <td class="text-start">@item.ProductName</td>
+                        <td class="text-center">@item.TotalQuantity</td>
+                        <td class="text-center">@item.Unit</td>
+                        <td>@item.Revenue.ToString("0.00") грн</td>
+                        <td>@item.Cost.ToString("0.00") грн</td>
+                        <td>
+                            @if (item.IsLoss)
+                            {
+                                <span class="text-danger">–@Math.Abs(item.Profit).ToString("0.00") грн</span>
+                            }
+                            else
+                            {
+                                <span class="text-success">+@item.Profit.ToString("0.00") грн</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+                @{
+                    var totalRevenue = Model.Sum(r => r.Revenue);
+                    var totalCost = Model.Sum(r => r.Cost);
+                    var totalProfit = Model.Sum(r => r.Profit);
+                }
+                <tfoot>
+                <tr class="table-danger fw-bold">
+                    <td colspan="3" class="text-end">Загалом:</td>
+                    <td class="text-end">@totalRevenue.ToString("0.00") грн</td>
+                    <td class="text-end">@totalCost.ToString("0.00") грн</td>
+                    <td class="text-end">@totalProfit.ToString("0.00") грн</td>
+                </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+
+    <a asp-action="Index" class="btn btn-outline-secondary mt-4">← Назад до списку звітів</a>
+</div>
+
+@section Scripts {
+    <script>
+        function setPreset(type) {
+            const today = new Date();
+            let start = new Date();
+            let end = today;
+
+            switch (type) {
+                case 'day': start = today; break;
+                case 'week': start.setDate(today.getDate() - 7); break;
+                case 'month': start.setMonth(today.getMonth() - 1); break;
+                case 'year': start.setFullYear(today.getFullYear() - 1); break;
+                case 'all':
+                    document.getElementById("startDate").value = "";
+                    document.getElementById("endDate").value = "";
+                    document.getElementById("reportForm").submit();
+                    return;
+            }
+
+            document.getElementById("startDate").value = start.toISOString().slice(0, 10);
+            document.getElementById("endDate").value = end.toISOString().slice(0, 10);
+            document.getElementById("reportForm").submit();
+        }
+    </script>
+}
+
+<style>
+    .btn-danger {
+        color: #fff !important;
+    }
+
+    .btn-outline-danger {
+        color: #fff !important;
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+    }
+
+    .btn-outline-danger:hover {
+        background-color: #bb2d3b !important;
+        border-color: #b02a37 !important;
+    }
+
+    .table-warning td {
+        background-color: #fff3cd !important;
+    }
+
+    .table-success td {
+        background-color: #d1e7dd !important;
+    }
+</style>

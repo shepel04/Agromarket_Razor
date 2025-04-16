@@ -1,0 +1,348 @@
+﻿@model List<Agromarket.Models.Supplier>
+@using Agromarket.Models
+@{
+    ViewData["Title"] = "Постачальники";
+    var allProducts = ViewBag.AllProducts as List<Product> ?? new();
+    var supplyPrices = ViewBag.SupplyPrices as Dictionary<int, decimal> ?? new();
+    var supplyHistory = ViewBag.SupplyHistory as List<SupplyOrder> ?? new();
+}
+<ul class="nav nav-tabs" id="supplierTabs" role="tablist">
+<li class="nav-item" role="presentation">
+    <button class="nav-link active" id="list-tab" data-bs-toggle="tab" data-bs-target="#supplierList" type="button" role="tab">Список постачальників</button>
+</li>
+<li class="nav-item" role="presentation">
+    <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">Історія запитів</button>
+</li>
+</ul>
+
+<div class="tab-content mt-3" id="supplierTabsContent">
+    <div class="tab-pane fade show active" id="supplierList" role="tabpanel" aria-labelledby="list-tab">
+
+    
+            <div class="tab-content" id="supplierTabsContent">
+                <h2 class="mb-4 text-success">Список постачальників</h2>
+
+                <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                    <i class="bi bi-plus-circle"></i> Додати постачальника
+                </button>
+
+                <table class="table table-bordered table-striped">
+                    <thead class="table-success">
+                    <tr>
+                        <th>Назва</th>
+                        <th>Email</th>
+                        <th>Телефон</th>
+                        <th>Адреса</th>
+                        <th>Дії</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var supplier in Model)
+                    {
+                        <tr>
+                            <td>@supplier.Name</td>
+                            <td>@supplier.ContactEmail</td>
+                            <td>@supplier.Phone</td>
+                            <td>@supplier.Address</td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#editProductsModal-@supplier.Id">
+                                        Асортимент
+                                    </button>
+
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editSupplierModal-@supplier.Id">
+                                        Редагувати
+                                    </button>
+
+                                    <form asp-action="Delete" asp-route-id="@supplier.Id" method="post" onsubmit="return confirm('Ви впевнені, що хочете видалити цього постачальника?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Видалити</button>
+                                    </form>
+
+                                    <a asp-action="CreateRequest" asp-route-supplierId="@supplier.Id" class="btn btn-sm btn-success">
+                                        Створити новий запит
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+
+
+
+
+                        <!-- Модальне вікно редагування постачальника -->
+                        <div class="modal fade" id="editSupplierModal-@supplier.Id" tabindex="-1" aria-labelledby="editSupplierModalLabel-@supplier.Id" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form method="post" asp-action="EditSupplier" asp-route-id="@supplier.Id">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="editSupplierModalLabel-@supplier.Id">✏️ Редагувати постачальника</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Назва</label>
+                                                <input type="text" class="form-control" name="Name" value="@supplier.Name" required />
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Email</label>
+                                                <input type="email" class="form-control" name="ContactEmail" value="@supplier.ContactEmail" required />
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Телефон</label>
+                                                <input type="text" class="form-control" name="Phone" value="@supplier.Phone" />
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Адреса</label>
+                                                <input type="text" class="form-control" name="Address" value="@supplier.Address" />
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Telegram Bot Token</label>
+                                                <input type="text" class="form-control" name="TelegramBotToken" value="@supplier.TelegramBotToken" />
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Telegram Channel ID</label>
+                                                <input type="text" class="form-control" name="TelegramChannelId" value="@supplier.TelegramChannelId" />
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-success">💾 Зберегти зміни</button>
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Модальне вікно підтвердження видалення -->
+                        <div class="modal fade" id="confirmDeleteModal-@supplier.Id" tabindex="-1" aria-labelledby="confirmDeleteLabel-@supplier.Id" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form asp-action="Delete" asp-route-id="@supplier.Id" method="post">
+                                        <div class="modal-header bg-danger text-white">
+                                            <h5 class="modal-title" id="confirmDeleteLabel-@supplier.Id">❌ Підтвердження видалення</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            Ви впевнені, що хочете видалити постачальника <strong>@supplier.Name</strong>?
+                                            <br/>
+                                            Усі пов’язані записи (асортимент, замовлення) також буде видалено.
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-danger">Видалити</button>
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!--Історія-->
+    <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+        <p>Debug: supplyHistory count = @supplyHistory.Count</p>
+        @if (!supplyHistory.Any())
+        {
+            <div class="alert alert-info mt-3">Запити на постачання поки що не створювались.</div>
+        }
+        else
+        {
+            <div class="table-responsive mt-3">
+                <table class="table table-striped table-bordered">
+                    <thead class="table-success">
+                    <tr>
+                        <th>Постачальник</th>
+                        <th>Дата замовлення</th>
+                        <th>Очікувана доставка</th>
+                        <th>Статус</th>
+                        <th>Товари</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var order in supplyHistory.OrderByDescending(o => o.OrderDate))
+                    {
+                        <tr>
+                            <td>@order.Supplier.Name</td>
+                            <td>@order.OrderDate.ToString("dd.MM.yyyy")</td>
+                            <td>@(order.ExpectedDeliveryDate?.ToString("dd.MM.yyyy") ?? "—")</td>
+                            <td>@order.Status</td>
+                            <td>
+                                <ul class="mb-0 ps-3">
+                                    @foreach (var item in order.Items)
+                                    {
+                                        <li>@item.Product.Name (@item.Quantity од.)</li>
+                                    }
+                                </ul>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Модальне вікно Додати постачальника -->
+<div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-action="CreateSupplier">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addSupplierModalLabel">➕ Додати постачальника</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Назва</label>
+                        <input type="text" class="form-control" name="Name" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="ContactEmail" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Телефон</label>
+                        <input type="text" class="form-control" name="Phone" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Адреса</label>
+                        <input type="text" class="form-control" name="Address" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telegram Bot Token <small class="text-muted">(необов'язково)</small></label>
+                        <input type="text" class="form-control" name="TelegramBotToken" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Telegram Channel ID <small class="text-muted">(необов'язково)</small></label>
+                        <input type="text" class="form-control" name="TelegramChannelId" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Зберегти</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальні вікна для кожного постачальника -->
+@foreach (var supplier in Model)
+{
+    <div class="modal fade" id="editProductsModal-@supplier.Id" tabindex="-1" aria-labelledby="editProductsLabel-@supplier.Id" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <form method="post" asp-action="EditProducts" asp-route-id="@supplier.Id" onsubmit="return validateForm(@supplier.Id)">
+                    <div class="modal-header bg-light">
+                        <h5 class="modal-title" id="editProductsLabel-@supplier.Id">🧺 Асортимент товарів постачальника: @supplier.Name</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                            @foreach (var product in allProducts)
+                            {
+                                var productId = product.Id;
+                                var supplyProduct = supplier.SupplyProducts?.FirstOrDefault(p => p.ProductId == productId);
+                                var price = supplyProduct?.Price ?? 0;
+                                var isAssigned = supplier.SupplyProducts != null && supplier.SupplyProducts.Any(p => p.ProductId == productId);
+
+                                <div class="col">
+                                    <div class="card h-100 border-0 shadow-sm product-card">
+                                    <div class="card-header bg-success text-white">
+                                            <strong>@product.Name</strong>
+                                        </div>
+                                        @if (product.ImageData != null && product.ImageData.Length > 0)
+                                        {
+                                            var base64Image = Convert.ToBase64String(product.ImageData);
+                                            <img src="data:image/png;base64,@base64Image" class="card-img-top" style="height: 180px; object-fit: cover;" />
+                                        }
+                                        <div class="card-body">
+                                            <p class="card-text mb-1">
+                                                <strong>Категорія:</strong> @product.Category<br />
+                                                <strong>Сезон:</strong> @product.SeasonStartMonth - @product.SeasonEndMonth<br />
+                                                <strong>Одиниця:</strong> @product.Unit
+                                            </p>
+
+                                            <input type="hidden" name="Items[@productId].ProductId" value="@productId" />
+
+                                            <div class="input-group mb-2">
+                                                <span class="input-group-text">₴</span>
+                                                <input type="number" min="1" step="1" class="form-control" name="Items[@productId].Price"
+                                                       value="@(isAssigned ? price.ToString() : "")"
+                                                       placeholder="Ціна постачальника" />
+                                            </div>
+
+                                            <div class="mb-2">
+                                                <label class="form-label">Додати в асортимент</label>
+                                                @{
+                                                    var selectedYes = isAssigned ? "selected" : "";
+                                                    var selectedNo = isAssigned ? "" : "selected";
+                                                }
+                                                <select class="form-select" name="Items[@productId].IsSelected">
+                                                    @if (isAssigned)
+                                                    {
+                                                        <option value="false">Ні</option>
+                                                        <option value="true" selected>Так</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="false" selected>Ні</option>
+                                                        <option value="true">Так</option>
+                                                    }
+
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">💾 Зберегти асортимент</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+
+
+<script>
+    function validateForm(supplierId) {
+        const form = document.querySelector(`#editProductsModal-${supplierId} form`);
+        const cards = form.querySelectorAll(".product-card");
+
+        for (let card of cards) {
+            const select = card.querySelector("select[name*='.IsSelected']");
+            const input = card.querySelector("input[name*='.Price']");
+
+            const isSelected = select?.value === "true";
+            const price = parseFloat(input?.value || "0");
+
+            if (isSelected && (isNaN(price) || price <= 0)) {
+                alert("Ціна товару не може бути 0 або порожньою, якщо він доданий до асортименту.");
+                input?.focus();
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    const triggerTabFromUrl = () => {
+        const hash = window.location.hash;
+        if (hash && document.querySelector(`.nav-link[href="${hash}"]`)) {
+            new bootstrap.Tab(document.querySelector(`.nav-link[href="${hash}"]`)).show();
+        }
+    }
+    document.addEventListener("DOMContentLoaded", triggerTabFromUrl);
+</script>
+

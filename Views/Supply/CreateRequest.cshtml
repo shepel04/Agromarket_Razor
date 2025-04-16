@@ -1,0 +1,79 @@
+﻿@model Agromarket.Models.SupplyOrder
+@using Agromarket.Models
+@{
+    ViewData["Title"] = "Нове замовлення постачальнику";
+    var supplier = ViewBag.SelectedSupplier as Supplier;
+    var products = ViewBag.SupplierProducts as List<SupplyProduct> ?? new();
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-success">📦 Створити замовлення постачальнику</h2>
+
+    @if (TempData["TelegramWarning"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            @TempData["TelegramWarning"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрити"></button>
+        </div>
+    }
+
+    <form asp-action="CreateRequest" method="post">
+        <input type="hidden" name="supplierId" value="@supplier?.Id" />
+
+        <div class="mb-3">
+            <label class="form-label">Постачальник</label>
+            <input type="text" class="form-control" value="@supplier?.Name" disabled />
+        </div>
+
+        <div class="table-responsive">
+            @if (!products.Any())
+            {
+                <div class="alert alert-warning">У цього постачальника немає асортименту товарів для замовлення.</div>
+            }
+            else
+            {
+                <table class="table table-bordered table-striped align-middle">
+                    <thead class="table-success">
+                    <tr>
+                        <th>Назва товару</th>
+                        <th>Одиниця</th>
+                        <th>Кількість</th>
+                        <th>Ціна закупівлі (грн)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @for (int i = 0; i < products.Count; i++)
+                    {
+                        var sp = products[i];
+                        
+                        
+                        <tr>
+                            <td>
+                                @sp.Product.Name
+                                <input type="hidden" name="items[@i].ProductId" value="@sp.ProductId" />
+                            </td>
+                            <td>@sp.Product.Unit</td>
+                            <td>
+                                <input type="number" name="items[@i].Quantity" class="form-control" min="0" value="0" />
+                            </td>
+                            <td>
+                                @sp.Price.ToString("0.00") грн
+                                <input type="hidden" name="items[@i].PurchasePrice" value="@sp.Price.ToString("0.00")" />
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+            
+        </div>
+
+        <div class="text-end">
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-send"></i> Надіслати замовлення
+            </button>
+            <a asp-action="Index" class="btn btn-secondary">Скасувати</a>
+        </div>
+    </form>
+</div>

@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 namespace Agromarket.Controllers
 {
@@ -22,7 +23,6 @@ namespace Agromarket.Controllers
         {
             var cart = GetCart();
 
-            // Оновити кількість доступного товару (MaxQuantity)
             foreach (var item in cart)
             {
                 var entry = _context.WarehouseEntries.FirstOrDefault(e => e.Id == item.EntryId);
@@ -30,12 +30,12 @@ namespace Agromarket.Controllers
             }
 
             ViewBag.TotalPrice = cart.Sum(p => p.Price * p.Quantity);
-            SaveCart(cart);
+            ViewBag.TotalDeposit = cart.Sum(p => p.DepositAmount);
 
+            SaveCart(cart);
             return View(cart);
         }
 
-        
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult AddToCart(int entryId, int quantity = 1, bool isPreorder = false, DateTime? preorderDate = null)
@@ -72,9 +72,42 @@ namespace Agromarket.Controllers
 
             var existingItem = cart.FirstOrDefault(p => p.EntryId == entryId);
 
+            decimal basePrice = entry.HasDiscount == true && entry.DiscountedPrice.HasValue
+                ? entry.DiscountedPrice.Value
+                : (entry.SellingPrice ?? 0);
+
+            bool isBulkOrder = quantity >= 50;
+            bool isPrivileged = User.IsInRole("admin") || User.IsInRole("enterpriseclient");
+            bool isClient = User.IsInRole("client");
+
+            decimal bulkPrice = Math.Round(basePrice * 0.95m, 2);
+
+            decimal finalPrice = (isBulkOrder && isPrivileged) ? bulkPrice : basePrice;
+
+            decimal deposit = (isBulkOrder && isClient && !isPrivileged)
+                ? Math.Round(finalPrice * quantity * 0.2m, 2)
+                : 0;
+            
+            if (isBulkOrder && isClient && !isPrivileged)
+            {
+                deposit = Math.Round(finalPrice * quantity * 0.2m, 2);
+            }
+
             if (existingItem != null)
             {
                 existingItem.Quantity += quantity;
+
+                bool newBulk = existingItem.Quantity >= 50;
+                bool isClientNow = User.IsInRole("client");
+
+                bool nowPrivileged = User.IsInRole("admin") || User.IsInRole("enterpriseclient");
+                existingItem.Price = (newBulk && nowPrivileged)
+                    ? Math.Round(basePrice * 0.95m, 2)
+                    : basePrice;
+
+                existingItem.DepositAmount = (newBulk && isClientNow && !nowPrivileged)
+                    ? Math.Round(existingItem.Price * existingItem.Quantity * 0.2m, 2)
+                    : 0;
             }
             else
             {
@@ -83,22 +116,20 @@ namespace Agromarket.Controllers
                     EntryId = entry.Id,
                     ProductId = entry.ProductId,
                     Name = entry.Product.Name,
-                    Price = entry.HasDiscount && entry.DiscountedPrice.HasValue
-                        ? entry.DiscountedPrice.Value
-                        : (entry.SellingPrice ?? 0),
+                    Price = finalPrice,
                     Quantity = quantity,
                     Unit = entry.Product.Unit,
                     ImageBase64 = entry.Product.ImageData != null ? Convert.ToBase64String(entry.Product.ImageData) : null,
                     MaxQuantity = entry.Quantity,
                     IsPreorder = addingPreorder,
-                    PreorderDate = preorderDate
+                    PreorderDate = preorderDate,
+                    DepositAmount = deposit
                 });
             }
 
             SaveCart(cart);
             return RedirectToAction("Index");
         }
-
 
         public IActionResult ProceedToCheckout()
         {
@@ -154,6 +185,24 @@ namespace Agromarket.Controllers
                 if (quantity > 0 && (entry.IsAvailableForPreorder || quantity <= entry.Quantity))
                 {
                     item.Quantity = quantity;
+
+                    bool isBulk = quantity >= 50;
+                    bool isPrivileged = User.IsInRole("admin") || User.IsInRole("enterpriseclient");
+                    bool isClient = User.IsInRole("client");
+
+                    decimal basePrice = entry.HasDiscount == true && entry.DiscountedPrice.HasValue
+                        ? entry.DiscountedPrice.Value
+                        : (entry.SellingPrice ?? 0);
+
+                    item.Price = (isBulk && isPrivileged)
+                        ? Math.Round(basePrice * 0.95m, 2)
+                        : basePrice;
+
+                    item.DepositAmount = (isBulk && isClient && !isPrivileged)
+                        ? Math.Round(item.Price * quantity * 0.2m, 2)
+                        : 0;
+
+                    item.IsPreorder = entry.Quantity == 0 && entry.IsAvailableForPreorder;
                 }
                 else if (quantity > entry.Quantity && !entry.IsAvailableForPreorder)
                 {
@@ -172,14 +221,20 @@ namespace Agromarket.Controllers
             }
 
             decimal totalPrice = cart.Sum(p => p.Price * p.Quantity);
+            decimal totalDeposit = cart.Sum(p => p.DepositAmount);
 
             return Json(new
             {
                 success = true,
                 totalItemPrice = item != null ? item.Price * item.Quantity : 0,
-                totalPrice
+                totalPrice,
+                totalDeposit,
+                price = item?.Price,
+                deposit = item?.DepositAmount,
+                isPreorder = item?.IsPreorder ?? false
             });
         }
+
 
         [HttpPost]
         public JsonResult RemoveFromCartAjax(int entryId)
@@ -194,8 +249,9 @@ namespace Agromarket.Controllers
             }
 
             decimal totalPrice = cart.Sum(p => p.Price * p.Quantity);
+            decimal totalDeposit = cart.Sum(p => p.DepositAmount);
 
-            return Json(new { success = true, totalPrice });
+            return Json(new { success = true, totalPrice, totalDeposit });
         }
 
         public IActionResult RemoveFromCart(int entryId)

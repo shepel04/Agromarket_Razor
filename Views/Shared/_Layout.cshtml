@@ -101,6 +101,7 @@
                                 <li><a class="dropdown-item" asp-controller="Warehouse" asp-action="Warehouse"><i class="fas fa-warehouse"></i> Складський облік</a></li>
                                 <li><a class="dropdown-item" asp-controller="Warehouse" asp-action="StockHistory"><i class="fas fa-history"></i> Історія операцій</a></li>
                                 <li><a class="dropdown-item" asp-controller="DemandForecast" asp-action="Index"><i class="fas fa-chart-bar"></i> Прогноз поставок</a></li>
+                                <li><a class="dropdown-item" asp-controller="Supply" asp-action="Index"><i class="fas fa-truck"></i> Постачальники</a></li>
                             }
                             @if (User.IsInRole("admin") || User.IsInRole("clientmanager"))
                             {
@@ -162,6 +163,64 @@
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const notificationDropdown = document.getElementById("notificationDropdown");
+        const notificationList = document.getElementById("notificationList");
+        const notificationIndicator = document.getElementById("notificationIndicator");
+        const markAsReadBtn = document.getElementById("markAsReadBtn");
+
+        if (notificationDropdown) {
+            notificationDropdown.addEventListener("click", function () {
+                fetch("/Notification/GetUserNotifications")
+                    .then(response => response.json())
+                    .then(data => {
+                        notificationList.innerHTML = "";
+
+                        if (data.length === 0) {
+                            notificationList.innerHTML = "<li class='dropdown-item text-muted'>Сповіщень немає</li>";
+                        } else {
+                            data.forEach(item => {
+                                const li = document.createElement("li");
+                                li.classList.add("dropdown-item", "text-wrap");
+                                li.textContent = item.message;
+                                notificationList.appendChild(li);
+                            });
+
+                            const divider = document.createElement("li");
+                            divider.innerHTML = "<hr class='dropdown-divider'>";
+                            notificationList.appendChild(divider);
+
+                            const actionBtn = document.createElement("li");
+                            actionBtn.classList.add("text-center");
+                            actionBtn.innerHTML = "<button class='btn btn-sm btn-outline-secondary' id='markAsReadBtn'>Помітити як прочитано</button>";
+                            notificationList.appendChild(actionBtn);
+
+                            notificationIndicator.classList.remove("d-none");
+                        }
+                    });
+            });
+        }
+
+        document.addEventListener("click", function (e) {
+            if (e.target && e.target.id === "markAsReadBtn") {
+                fetch("/Notification/MarkAllAsRead", { method: "POST" })
+                    .then(() => {
+                        notificationIndicator.classList.add("d-none");
+                        notificationList.innerHTML = "<li class='dropdown-item text-muted'>Сповіщень немає</li>";
+                    });
+            }
+        });
+
+        fetch("/Notification/GetUserNotifications")
+            .then(res => res.json())
+            .then(data => {
+                if (data.length > 0) {
+                    notificationIndicator.classList.remove("d-none");
+                }
+            });
+    });
+</script>
 
 @await RenderSectionAsync("Scripts", required: false)
 </body>

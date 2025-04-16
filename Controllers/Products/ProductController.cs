@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Agromarket.Controllers
 {
-    [Authorize(Roles = "warehousemanager, admin, client")] // Доступ для warehousemanager, admin, client
     public class ProductController : Controller
     {
         private readonly ApplicationDbContext _context;

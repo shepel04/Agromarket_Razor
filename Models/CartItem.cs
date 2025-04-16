@@ -24,6 +24,9 @@ namespace Agromarket.Models
         [DataType(DataType.DateTime)]
         [DisplayFormat(DataFormatString = "{0:u}", ApplyFormatInEditMode = true)]
         public DateTime? PreorderDate { get; set; }
+        
+        public decimal DepositAmount { get; set; } = 0;
+
 
 
     }

@@ -42,6 +42,8 @@ builder.Services.AddControllersWithViews();
 // Додаємо сервіс для ініціалізації ролей та адміністратора
 builder.Services.AddHostedService<DatabaseInitializerService>();
 
+builder.Services.AddHttpClient();
+
 var app = builder.Build();
 
 // Конфігурація HTTP-пайплайну

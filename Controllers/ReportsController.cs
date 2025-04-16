@@ -111,6 +111,81 @@ namespace Agromarket.Controllers
 
             return View(summary);
         }
+        
+        [HttpGet]
+        public IActionResult DiscountSalesReport(DateTime? startDate, DateTime? endDate)
+        {
+            var orderItemsQuery = _context.OrderItems
+                .Include(o => o.Order)
+                .Where(o => o.Order.Status == OrderStatus.Виконано);
+
+            if (startDate.HasValue)
+                orderItemsQuery = orderItemsQuery.Where(o => o.Order.OrderDate >= DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc));
+
+            if (endDate.HasValue)
+                orderItemsQuery = orderItemsQuery.Where(o => o.Order.OrderDate <= DateTime.SpecifyKind(endDate.Value.AddDays(1).AddSeconds(-1), DateTimeKind.Utc));
+
+            var orderItems = orderItemsQuery.ToList();
+
+            var productCosts = _context.WarehouseEntries
+                .GroupBy(e => e.ProductId)
+                .Select(g => new
+                {
+                    ProductId = g.Key,
+                    AvgCost = g.Average(e => e.PurchasePrice)
+                })
+                .ToDictionary(e => e.ProductId, e => e.AvgCost);
+
+            var productSelling = _context.WarehouseEntries
+                .GroupBy(e => e.ProductId)
+                .Select(g => new
+                {
+                    ProductId = g.Key,
+                    AvgSellingPrice = g.Average(e => e.SellingPrice)
+                })
+                .ToDictionary(e => e.ProductId, e => e.AvgSellingPrice ?? 0);
+
+            var discounted = orderItems
+                .Where(o =>
+                {
+                    var originalPrice = productSelling.ContainsKey(o.ProductId) ? productSelling[o.ProductId] : 0;
+                    return o.Price < originalPrice;
+                })
+                .GroupBy(o => new { o.ProductId, o.ProductName, o.Unit })
+                .Select(g =>
+                {
+                    var pid = g.Key.ProductId;
+                    decimal avgCost = productCosts.ContainsKey(pid) ? productCosts[pid] : 0;
+                    decimal sellingPrice = productSelling.ContainsKey(pid) ? productSelling[pid] : 0;
+
+                    var totalQty = g.Sum(x => x.Quantity);
+                    var revenue = g.Sum(x => x.Price * x.Quantity);
+                    var cost = avgCost * totalQty;
+                    var profit = revenue - cost;
+
+                    return new DiscountSalesReportRow
+                    {
+                        ProductName = g.Key.ProductName,
+                        Unit = g.Key.Unit,
+                        TotalQuantity = totalQty,
+                        Revenue = revenue,
+                        Cost = cost,
+                        Profit = profit,
+                        IsLoss = profit < 0,
+                        OriginalPrice = sellingPrice
+                    };
+                })
+                .OrderBy(r => r.Profit)
+                .ToList();
+
+            ViewBag.StartDate = startDate;
+            ViewBag.EndDate = endDate;
+
+            return View("DiscountSalesReport", discounted);
+        }
+
+
+
 
 
 
@@ -143,5 +218,19 @@ namespace Agromarket.Controllers
         public decimal TotalStockValue { get; set; }
         public List<StockReportRow> CategoryDetails { get; set; }
     }
+    
+    public class DiscountSalesReportRow
+    {
+        public string ProductName { get; set; }
+        public string Unit { get; set; }
+        public int TotalQuantity { get; set; }
+        public decimal Revenue { get; set; }
+        public decimal Cost { get; set; }
+        public decimal Profit { get; set; }
+        public decimal OriginalPrice { get; set; }
+        public bool IsLoss { get; set; }
+    }
+
+
 
 }
