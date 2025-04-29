@@ -69,6 +69,44 @@
         .box-shadow {
             box-shadow: 0 4px 6px rgba(0,0,0,.1);
         }
+
+        .dropdown-menu.notifications {
+            min-width: 320px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+            background-color: #ffffff;
+            border-radius: 10px;
+            border: 1px solid #d4edda;
+        }
+
+        .dropdown-menu.notifications li.dropdown-item {
+            white-space: normal;
+            font-size: 0.9rem;
+            padding: 10px 15px;
+            border-bottom: 1px solid #e8f5e9;
+        }
+
+        .dropdown-menu.notifications li.dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-menu.notifications li:hover {
+            background-color: #f4fdf4;
+        }
+
+        .notification-header {
+            font-weight: 600;
+            padding: 10px 15px;
+            color: #145c2b;
+            border-bottom: 1px solid #d4edda;
+            background-color: #f0fff0;
+        }
+
+        #markAsReadBtn {
+            margin: 8px auto;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -106,6 +144,7 @@
                             @if (User.IsInRole("admin") || User.IsInRole("clientmanager"))
                             {
                                 <li><a class="dropdown-item" asp-controller="Order" asp-action="OrderList"><i class="fas fa-box"></i> Замовлення</a></li>
+                                <li><a class="dropdown-item" asp-controller="UserManagement" asp-action="Index"><i class="fas fa-users"></i> Клієнти</a></li>
                                 <li><a class="dropdown-item" asp-controller="Reports" asp-action=""><i class="fas fa-chart-line"></i> Звіти</a></li>
                             }
                         </ul>
@@ -129,8 +168,10 @@
                                 <span id="notificationIndicator" class="position-absolute top-0 start-100 translate-middle p-1 bg-success border border-light rounded-circle d-none"></span>
                             </a>
 
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" id="notificationList">
+                            <ul class="dropdown-menu dropdown-menu-end notifications" aria-labelledby="notificationDropdown" id="notificationList">
+                                <li class="notification-header">Сповіщення</li>
                                 <li class="dropdown-item text-muted">Завантаження...</li>
+                            
                                 <li><hr class="dropdown-divider"></li>
                                 <li class="text-center">
                                     <button class="btn btn-sm btn-outline-secondary" id="markAsReadBtn">Помітити як прочитано</button>

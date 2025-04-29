@@ -37,13 +37,37 @@ namespace Agromarket.Controllers.Admin
         public async Task<IActionResult> ChangeRole(string userId, string newRole)
         {
             var user = await _userManager.FindByIdAsync(userId);
-            if (user != null)
+            if (user == null)
             {
-                var currentRoles = await _userManager.GetRolesAsync(user);
-                await _userManager.RemoveFromRolesAsync(user, currentRoles);
-                await _userManager.AddToRoleAsync(user, newRole);
+                TempData["Error"] = "Користувача не знайдено.";
+                return RedirectToAction("Index");
             }
+
+            if (!await _roleManager.RoleExistsAsync(newRole))
+            {
+                TempData["Error"] = $"Роль '{newRole}' не існує.";
+                return RedirectToAction("Index");
+            }
+
+            var currentRoles = await _userManager.GetRolesAsync(user);
+
+            var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+            if (!removeResult.Succeeded)
+            {
+                TempData["Error"] = "Не вдалося видалити поточні ролі.";
+                return RedirectToAction("Index");
+            }
+
+            var addResult = await _userManager.AddToRoleAsync(user, newRole);
+            if (!addResult.Succeeded)
+            {
+                TempData["Error"] = "Не вдалося призначити нову роль.";
+                return RedirectToAction("Index");
+            }
+
+            TempData["Success"] = "Роль оновлено успішно.";
             return RedirectToAction("Index");
         }
+
     }
 }

@@ -224,12 +224,20 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJcT3JkZXJTdWNjZXNzLmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/Razor/Agromarket/Views/Order/OutOfStock.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJcT3V0T2ZTdG9jay5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/Razor/Agromarket/Views/Order/_OrderDetails.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJcX09yZGVyRGV0YWlscy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/Razor/Agromarket/Views/Order/_OrderTablePartial.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcT3JkZXJcX09yZGVyVGFibGVQYXJ0aWFsLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Razor/Agromarket/Views/Payment/Preorder.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGF5bWVudFxQcmVvcmRlci5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/Razor/Agromarket/Views/Product/AddProduct.cshtml]
@@ -290,6 +298,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/Razor/Agromarket/Views/Supply/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU3VwcGx5XEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Razor/Agromarket/Views/UserManagement/Clients.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlck1hbmFnZW1lbnRcQ2xpZW50cy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Razor/Agromarket/Views/UserManagement/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcVXNlck1hbmFnZW1lbnRcSW5kZXguY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/Razor/Agromarket/Views/Warehouse/Catalog.cshtml]

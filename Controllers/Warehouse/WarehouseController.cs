@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Identity;
 
 namespace Agromarket.Controllers.Warehouse
 {
@@ -13,10 +14,12 @@ namespace Agromarket.Controllers.Warehouse
     public class WarehouseController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<IdentityUser> _userManager;
 
-        public WarehouseController(ApplicationDbContext context)
+        public WarehouseController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
         [HttpGet]
@@ -138,37 +141,42 @@ namespace Agromarket.Controllers.Warehouse
             var entriesQuery = _context.WarehouseEntries
                 .Include(e => e.Product)
                 .Where(e => e.Product != null);
-
+        
             // Пошук
             if (!string.IsNullOrWhiteSpace(search))
             {
                 entriesQuery = entriesQuery.Where(e => e.Product.Name.Contains(search));
             }
-
+        
             // Категорія
             if (!string.IsNullOrWhiteSpace(category))
             {
                 entriesQuery = entriesQuery.Where(e => e.Product.Category == category);
             }
-
+        
             // Діапазон цін
             if (minPrice.HasValue)
             {
                 entriesQuery = entriesQuery.Where(e => e.SellingPrice >= minPrice.Value);
             }
-
+        
             if (maxPrice.HasValue)
             {
                 entriesQuery = entriesQuery.Where(e => e.SellingPrice <= maxPrice.Value);
             }
-
+        
             // Тільки в наявності
             if (inStock)
             {
                 entriesQuery = entriesQuery.Where(e => e.Quantity > 0);
             }
-
-            // Групуємо по товарах: беремо перше надходження з наявністю або найсвіжіше
+        
+            // НОВА УМОВА — виключаємо прострочені товари
+            entriesQuery = entriesQuery.Where(e => 
+                e.ExpirationDate == null || e.ExpirationDate > DateTime.UtcNow
+            );
+        
+            // Групуємо по товарах
             var grouped = entriesQuery
                 .AsEnumerable()
                 .GroupBy(e => e.ProductId)
@@ -177,14 +185,14 @@ namespace Agromarket.Controllers.Warehouse
                     .ThenBy(e => e.ExpirationDate)
                     .First())
                 .ToList();
-
+        
             // Пагінація
             var totalItems = grouped.Count;
             var paged = grouped
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
-
+        
             // Категорії для фільтра
             ViewBag.Categories = _context.Products
                 .Where(p => !string.IsNullOrEmpty(p.Category))
@@ -192,26 +200,32 @@ namespace Agromarket.Controllers.Warehouse
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();
-
+        
             ViewBag.CurrentPage = page;
             ViewBag.TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
-
+        
             return View(paged);
         }
 
 
 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult TogglePreorder([FromBody] TogglePreorderRequest request)
+        public async Task<IActionResult> TogglePreorder(int entryId, bool isAvailableForPreorder)
         {
-            var entry = _context.WarehouseEntries.FirstOrDefault(e => e.Id == request.EntryId);
-            if (entry == null) return NotFound();
+            var entry = await _context.WarehouseEntries.FirstOrDefaultAsync(e => e.Id == entryId);
 
-            entry.IsAvailableForPreorder = request.IsAvailable;
-            _context.SaveChanges();
+            if (entry == null)
+            {
+                return Json(new { success = false, message = "Товар не знайдено." });
+            }
 
-            return Ok();
+            entry.IsAvailableForPreorder = isAvailableForPreorder;
+            _context.WarehouseEntries.Update(entry);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
         }
 
         [HttpPost]
@@ -296,6 +310,76 @@ namespace Agromarket.Controllers.Warehouse
 
             return RedirectToAction("Warehouse");
         }
+        
+        public void ApplyExpirationDiscount()
+        {
+            var now = DateTime.UtcNow;
+
+            var entries = _context.WarehouseEntries
+                .Include(e => e.Product)
+                .Where(e => e.ExpirationDate != null && e.Quantity > 0)
+                .ToList();
+
+            var soonExpiring = entries
+                .Where(e => 
+                    (e.ExpirationDate.Value - now).TotalDays <= 4 &&
+                    (!e.HasDiscount || e.DiscountPercent < 30))
+                .ToList();
+
+            foreach (var entry in soonExpiring)
+            {
+                entry.HasDiscount = true;
+                entry.DiscountPercent = 30;
+                entry.DiscountStartDate = now;
+                entry.DiscountEndDate = entry.ExpirationDate;
+
+                _context.WarehouseEntries.Update(entry);
+            }
+
+            _context.SaveChanges();
+        }
+
+        public async Task NotifyExpiredProductsAsync()
+        {
+            var now = DateTime.UtcNow;
+
+            var expiredEntries = await _context.WarehouseEntries
+                .Include(e => e.Product)
+                .Where(e => e.Quantity > 0 && e.ExpirationDate != null && e.ExpirationDate < now)
+                .ToListAsync();
+
+            if (!expiredEntries.Any()) return;
+
+            var warehouseManagers = await _userManager.GetUsersInRoleAsync("warehousemanager");
+            var admins = await _userManager.GetUsersInRoleAsync("admin");
+            var recipients = warehouseManagers.Concat(admins).Distinct();
+
+            foreach (var user in recipients)
+            {
+                foreach (var entry in expiredEntries)
+                {
+                    bool alreadyNotified = _context.Notifications.Any(n =>
+                        n.UserId == user.Id &&
+                        n.Message.Contains($"\"{entry.Product.Name}\"") &&
+                        n.CreatedAt > now.AddDays(-1)); // не дублювати щодня
+
+                    if (!alreadyNotified)
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            UserId = user.Id,
+                            Message = $"Термін придатності товару \"{entry.Product.Name}\" (партія #{entry.Id}) вичерпано ({entry.ExpirationDate?.ToLocalTime():dd.MM.yyyy}).",
+                            CreatedAt = now,
+                            IsRead = false,
+                            RedirectUrl = $"/Warehouse/Details/{entry.Id}"
+                        });
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
 
     }
 }

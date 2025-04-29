@@ -6,6 +6,8 @@
 }
 
 <h2 class="mb-4">Складський облік</h2>
+<div id="liveAlertPlaceholder"></div>
+
 
 <button class="btn btn-primary mb-3" id="openAddStockModal">➕ Додати товар на склад</button>
 
@@ -270,5 +272,62 @@
         }
 
         addBtn.click();
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('.preorder-toggle').forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+                const entryId = this.dataset.entryId;
+                const isAvailableForPreorder = this.checked;
+
+                const formData = new FormData();
+                formData.append('entryId', entryId);
+                formData.append('isAvailableForPreorder', isAvailableForPreorder);
+
+                // Отримуємо токен
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (tokenInput) {
+                    formData.append('__RequestVerificationToken', tokenInput.value);
+                }
+
+                fetch('/Warehouse/TogglePreorder', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network error');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            showAlert('Статус передзамовлення оновлено успішно.', 'success');
+                        } else {
+                            showAlert('Помилка при оновленні статусу.', 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showAlert('Помилка з\'єднання із сервером.', 'danger');
+                    });
+            });
+        });
+
+        function showAlert(message, type) {
+            const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show mt-3" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрити"></button>
+            </div>
+        `;
+            alertPlaceholder.append(wrapper);
+
+            // Автоматично закривати через 5 секунд
+            setTimeout(() => {
+                const alert = bootstrap.Alert.getOrCreateInstance(wrapper.querySelector('.alert'));
+                alert.close();
+            }, 5000);
+        }
     });
 </script>

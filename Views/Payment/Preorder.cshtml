@@ -1,0 +1,24 @@
+﻿@{
+    ViewData["Title"] = "Оплата передплати";
+    decimal amount = (decimal)ViewBag.Amount;
+}
+
+<div class="container mt-5">
+    <div class="text-center">
+        <h2 class="mb-3">Оплата передзамовлення</h2>
+        <p>Необхідно внести передплату у розмірі:</p>
+        <h3 class="text-primary mb-4">@amount.ToString("0.00") грн</h3>
+
+        <form asp-action="ProcessPreorderPayment" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="amount" value="@amount" />
+            <button type="submit" class="btn btn-success btn-lg">
+                💳 Перейти до оплати
+            </button>
+        </form>
+
+        <div class="mt-3">
+            <a href="@Url.Action("Checkout", "Order")" class="btn btn-link">⬅ Повернутись до оформлення</a>
+        </div>
+    </div>
+</div>

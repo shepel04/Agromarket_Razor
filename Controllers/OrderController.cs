@@ -39,116 +39,199 @@ namespace Agromarket.Controllers
         }
 
         [HttpPost]
-    public async Task<IActionResult> Checkout(Order order)
-    {
-        var cart = GetCart();
-        if (!cart.Any()) return RedirectToAction("Index", "Cart");
-
-        if (!ModelState.IsValid)
+        public async Task<IActionResult> Checkout(Order order)
         {
-            ViewBag.CartItems = cart;
-            ViewBag.TotalAmount = cart.Sum(i => i.Price * i.Quantity);
-            return View(order);
-        }
+            var cart = GetCart();
+            if (!cart.Any())
+                return RedirectToAction("Index", "Cart");
 
-        var entryIds = cart.Select(c => c.EntryId).ToList();
-        var entries = await _context.WarehouseEntries
-            .Include(e => e.Product)
-            .Where(e => entryIds.Contains(e.Id))
-            .ToListAsync();
-
-        List<string> insufficient = new();
-        List<WarehouseEntry> depletedEntries = new();
-
-        foreach (var item in cart)
-        {
-            var entry = entries.FirstOrDefault(e => e.Id == item.EntryId);
-            if (entry == null || (!entry.IsAvailableForPreorder && entry.Quantity < item.Quantity))
+            if (!ModelState.IsValid)
             {
-                insufficient.Add($"{item.Name} (доступно: {entry?.Quantity ?? 0}, потрібно: {item.Quantity})");
+                ViewBag.CartItems = cart;
+                ViewBag.TotalAmount = cart.Sum(i => i.Price * i.Quantity);
+                return View(order);
             }
-        }
 
-        if (insufficient.Any())
-        {
-            TempData["StockError"] = "Недостатньо залишків:<br>" + string.Join("<br>", insufficient);
-            return RedirectToAction("Checkout");
-        }
+            var productIds = cart.Select(c => c.ProductId).ToList();
 
-        foreach (var item in cart)
-        {
-            var entry = entries.First(e => e.Id == item.EntryId);
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
-            if (!item.IsPreorder && entry.Quantity >= item.Quantity)
+            var warehouseEntries = await _context.WarehouseEntries
+                .Include(e => e.Product)
+                .Where(e => productIds.Contains(e.ProductId))
+                .ToListAsync();
+
+            List<string> insufficient = new();
+
+            var availableStock = warehouseEntries
+                .GroupBy(e => e.ProductId)
+                .ToDictionary(g => g.Key, g => g.Sum(e => e.Quantity));
+
+            foreach (var item in cart.Where(c => !c.IsPreorder)) // Перевіряємо лише звичайні товари
             {
-                entry.Quantity -= item.Quantity;
-                _context.WarehouseEntries.Update(entry);
-                if (entry.Quantity == 0) depletedEntries.Add(entry);
+                availableStock.TryGetValue(item.ProductId, out int stockQuantity);
+
+                if (stockQuantity < item.Quantity)
+                {
+                    insufficient.Add($"{item.Name} (доступно: {stockQuantity}, потрібно: {item.Quantity})");
+                }
             }
-        }
 
-        order.OrderItems = cart.Select(item => new OrderItem
-        {
-            ProductId = item.ProductId,
-            ProductName = item.Name,
-            Price = item.Price,
-            Quantity = item.Quantity,
-            Unit = item.Unit,
-            IsPreorder = item.IsPreorder,
-            PreorderDate = item.PreorderDate?.ToUniversalTime()
-        }).ToList();
-
-
-        order.TotalAmount = cart.Sum(i => i.Price * i.Quantity);
-        order.OrderDate = DateTime.UtcNow;
-        order.Status = OrderStatus.Виконується;
-
-        _context.Orders.Add(order);
-        await _context.SaveChangesAsync();
-
-        // Повідомлення менеджерам
-        var managers = new List<IdentityUser>();
-        managers.AddRange(await _userManager.GetUsersInRoleAsync("clientmanager"));
-        managers.AddRange(await _userManager.GetUsersInRoleAsync("admin"));
-
-        foreach (var user in managers.Distinct())
-        {
-            _context.Notifications.Add(new Notification
+            if (insufficient.Any())
             {
-                UserId = user.Id,
-                Message = $"Нове замовлення #{order.Id} від {order.CustomerEmail}",
-                CreatedAt = DateTime.UtcNow,
-                IsRead = false,
-                RedirectUrl = Url.Action("EditOrder", "Order", new { id = order.Id })
-            });
+                var firstProblemItem = cart.FirstOrDefault(c => insufficient.Any(ins => ins.Contains(c.Name)));
+                if (firstProblemItem != null)
+                {
+                    var entries = await _context.WarehouseEntries
+                        .Where(e => e.ProductId == firstProblemItem.ProductId)
+                        .ToListAsync();
+
+                    bool isAvailableForPreorder = entries.Any(e => e.IsAvailableForPreorder);
+
+                    var viewModel = new OutOfStockViewModel
+                    {
+                        ProductId = firstProblemItem.EntryId,
+                        ProductName = firstProblemItem.Name,
+                        IsAvailableForPreorder = isAvailableForPreorder
+                    };
+
+                    await transaction.RollbackAsync();
+                    return View("OutOfStock", viewModel);
+                }
+
+                await transaction.RollbackAsync();
+                return RedirectToAction("Checkout");
+            }
+
+            // ======= Нове: Розділяємо на звичайні замовлення і передзамовлення =======
+
+            var regularItems = cart.Where(c => !c.IsPreorder).ToList();
+            var preorderItems = cart.Where(c => c.IsPreorder).ToList();
+
+            // --- 1. Створення основного замовлення (звичайне)
+            if (regularItems.Any())
+            {
+                var regularOrder = new Order
+                {
+                    CustomerName = order.CustomerName,
+                    CustomerEmail = order.CustomerEmail,
+                    CustomerPhone = order.CustomerPhone,
+                    DeliveryAddress = order.DeliveryAddress,
+                    OrderDate = DateTime.UtcNow,
+                    Status = OrderStatus.Виконується,
+                    TotalAmount = regularItems.Sum(c => c.Price * c.Quantity),
+                    OrderItems = regularItems.Select(c => new OrderItem
+                    {
+                        ProductId = c.ProductId,
+                        ProductName = c.Name,
+                        Quantity = c.Quantity,
+                        Price = c.Price,
+                        Unit = c.Unit,
+                        IsPreorder = false
+                    }).ToList()
+                };
+
+                // Списання залишків
+                foreach (var item in regularItems)
+                {
+                    int remainingToDeduct = item.Quantity;
+
+                    var productEntries = warehouseEntries
+                        .Where(e => e.ProductId == item.ProductId && e.Quantity > 0)
+                        .OrderBy(e => e.ReceivedDate)
+                        .ToList();
+
+                    foreach (var entry in productEntries)
+                    {
+                        if (remainingToDeduct <= 0)
+                            break;
+
+                        int deduction = Math.Min(entry.Quantity, remainingToDeduct);
+                        entry.Quantity -= deduction;
+                        remainingToDeduct -= deduction;
+                        _context.WarehouseEntries.Update(entry);
+                    }
+                }
+
+                _context.Orders.Add(regularOrder);
+            }
+
+            // --- 2. Створення передзамовлення
+            if (preorderItems.Any())
+            {
+                var preorderOrder = new Order
+                {
+                    CustomerName = order.CustomerName,
+                    CustomerEmail = order.CustomerEmail,
+                    CustomerPhone = order.CustomerPhone,
+                    DeliveryAddress = order.DeliveryAddress,
+                    OrderDate = DateTime.UtcNow,
+                    Status = OrderStatus.Виконується,
+                    TotalAmount = preorderItems.Sum(c => c.Price * c.Quantity),
+                    OrderItems = preorderItems.Select(c => new OrderItem
+                    {
+                        ProductId = c.ProductId,
+                        ProductName = c.Name,
+                        Quantity = c.Quantity,
+                        Price = c.Price,
+                        Unit = c.Unit,
+                        IsPreorder = true,
+                        PreorderDate = c.PreorderDate ?? DateTime.UtcNow.AddDays(7) // якщо треба додати очікувану дату
+                    }).ToList()
+                };
+
+                _context.Orders.Add(preorderOrder);
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            ClearCart();
+
+            return RedirectToAction("OrderSuccess");
         }
 
-        // Повідомлення складським менеджерам
-        if (depletedEntries.Any())
+
+
+        private async Task NotifyLowStockAsync()
         {
+            var lowStockEntries = await _context.WarehouseEntries
+                .Include(e => e.Product)
+                .Where(e => e.Quantity < 10)
+                .ToListAsync();
+
+            if (!lowStockEntries.Any()) return;
+
             var warehouseManagers = await _userManager.GetUsersInRoleAsync("warehousemanager");
             var admins = await _userManager.GetUsersInRoleAsync("admin");
             var recipients = warehouseManagers.Concat(admins).Distinct();
 
             foreach (var user in recipients)
             {
-                foreach (var entry in depletedEntries)
+                foreach (var entry in lowStockEntries)
                 {
-                    _context.Notifications.Add(new Notification
+                    bool alreadyNotified = _context.Notifications.Any(n =>
+                            n.UserId == user.Id &&
+                            n.Message.Contains($"\"{entry.Product.Name}\"") &&
+                            n.CreatedAt > DateTime.UtcNow.AddHours(-6) 
+                    );
+
+                    if (!alreadyNotified)
                     {
-                        UserId = user.Id,
-                        Message = $"Товар \"{entry.Product.Name}\" (в партії #{entry.Id}) закінчився.",
-                        CreatedAt = DateTime.UtcNow,
-                        IsRead = false
-                    });
+                        _context.Notifications.Add(new Notification
+                        {
+                            UserId = user.Id,
+                            Message = $"Низький рівень запасів: товар \"{entry.Product.Name}\" (в партії #{entry.Id}) — лише {entry.Quantity} од.",
+                            CreatedAt = DateTime.UtcNow,
+                            IsRead = false,
+                            RedirectUrl = $"/Warehouse/Details/{entry.Id}"
+                        });
+                    }
                 }
             }
-        }
 
-        await _context.SaveChangesAsync();
-        ClearCart();
-        return RedirectToAction("OrderSuccess");
-    }
+            await _context.SaveChangesAsync();
+        }
 
 
         [HttpPost]
@@ -194,6 +277,8 @@ namespace Agromarket.Controllers
 
             order.Status = newStatus;
             await _context.SaveChangesAsync();
+            
+            await NotifyLowStockAsync();
 
             var updatedOrders = await _context.Orders.Include(o => o.OrderItems).ToListAsync();
             return View("OrderList", updatedOrders);

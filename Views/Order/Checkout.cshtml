@@ -2,23 +2,41 @@
 
 @{
     ViewData["Title"] = "Оформлення замовлення";
+    var cart = ViewBag.CartItems as List<Agromarket.Models.CartItem>;
     bool isUserLoggedIn = !string.IsNullOrEmpty(Model.CustomerEmail);
+    var regularItems = cart?.Where(c => !c.IsPreorder).ToList() ?? new();
+    var preorderItems = cart?.Where(c => c.IsPreorder).ToList() ?? new();
+    var regularTotal = regularItems.Sum(i => i.Price * i.Quantity);
+    var preorderTotal = preorderItems.Sum(i => i.Price * i.Quantity);
+    bool isClient = User.IsInRole("client");
+    string currentUserRole = User.IsInRole("admin") ? "admin"
+        : User.IsInRole("entertaiment") ? "enterpriseclient"
+        : User.IsInRole("warehousemanager") ? "warehousemanager"
+        : User.IsInRole("clientmanager") ? "client"
+        : User.IsInRole("client") ? "client"
+        : "unknown";
+    bool hasPreorder = preorderItems.Any();
+    decimal preorderDeposit = preorderItems.Sum(i => i.Price * i.Quantity * 0.2m);
+    bool isPrepaid = TempData["PreorderPaid"] as bool? == true;
+    bool disableSubmit = isClient && hasPreorder && !isPrepaid;
 }
 
 <h2 class="text-center mb-4">Оформлення замовлення</h2>
 
-<form asp-action="Checkout" method="post">
+<form asp-action="Checkout" method="post" class="needs-validation" novalidate>
     <div class="row">
+        <!-- Ліва колонка -->
         <div class="col-md-6">
+            <h4 class="mb-3">Дані покупця</h4>
+
             <div class="mb-3">
-                <label asp-for="CustomerName" class="form-label"></label>
+                <label asp-for="CustomerName" class="form-label">Ім’я та прізвище</label>
                 <input asp-for="CustomerName" class="form-control" required />
                 <span asp-validation-for="CustomerName" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
-                <label asp-for="CustomerEmail" class="form-label"></label>
-
+                <label asp-for="CustomerEmail" class="form-label">Електронна пошта</label>
                 @if (isUserLoggedIn)
                 {
                     <input asp-for="CustomerEmail" class="form-control" value="@Model.CustomerEmail" readonly />
@@ -27,49 +45,122 @@
                 {
                     <input asp-for="CustomerEmail" class="form-control" required />
                 }
-
                 <span asp-validation-for="CustomerEmail" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
-                <label asp-for="CustomerPhone" class="form-label"></label>
+                <label asp-for="CustomerPhone" class="form-label">Телефон</label>
                 <input asp-for="CustomerPhone" class="form-control" required
-                       pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'')"
-                       placeholder="+380">
+                       pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'')" placeholder="+380..." />
                 <span asp-validation-for="CustomerPhone" class="text-danger"></span>
             </div>
 
             <div class="mb-3">
-                <label asp-for="DeliveryAddress" class="form-label"></label>
+                <label asp-for="DeliveryAddress" class="form-label">Адреса доставки</label>
                 <input asp-for="DeliveryAddress" class="form-control" required />
                 <span asp-validation-for="DeliveryAddress" class="text-danger"></span>
             </div>
         </div>
 
+        <!-- Права колонка -->
         <div class="col-md-6">
-            <h4>Ваше замовлення</h4>
-            <ul class="list-group mb-3">
-                @foreach (var item in ViewBag.CartItems)
-                {
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>@item.Name (@item.Quantity @item.Unit)</span>
-                        <span>@(item.Price * item.Quantity) грн</span>
-                    </li>
-                }
-                <li class="list-group-item d-flex justify-content-between">
-                    <strong>Загальна сума:</strong>
-                    <strong>@ViewBag.TotalAmount грн</strong>
-                </li>
-            </ul>
+            <h4 class="mb-3">Ваше замовлення</h4>
+
+            @if (regularItems.Any())
+            {
+                <div class="mb-3">
+                    <h5 class="text-success">✅ Готові до відправки</h5>
+                    <ul class="list-group">
+                        @foreach (var item in regularItems)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span>@item.Name</span>
+                                    <div class="text-muted small">@item.Quantity @item.Unit</div>
+                                </div>
+                                <strong>@(item.Price * item.Quantity) грн</strong>
+                            </li>
+                        }
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">Сума:</span>
+                            <span class="fw-bold">@regularTotal.ToString("0.00") грн</span>
+                        </li>
+                    </ul>
+                </div>
+            }
+
+            @if (preorderItems.Any())
+            {
+                <div class="mb-3 mt-4">
+                    <h5 class="text-warning">🕓 Передзамовлення</h5>
+                    <ul class="list-group">
+                        @foreach (var item in preorderItems)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span>@item.Name</span>
+                                    <div class="text-muted small">@item.Quantity @item.Unit</div>
+                                    @if (item.PreorderDate != null)
+                                    {
+                                        <div class="text-muted small">Очікувана дата: <strong>@item.PreorderDate?.ToString("dd.MM.yyyy")</strong></div>
+                                    }
+                                </div>
+                                <strong>@(item.Price * item.Quantity) грн</strong>
+                            </li>
+                        }
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">Сума передзамовлення:</span>
+                            <span class="fw-bold">@preorderTotal.ToString("0.00") грн</span>
+                        </li>
+                    </ul>
+                </div>
+            }
+
+            <div class="mt-4 border-top pt-3">
+                <h5 class="d-flex justify-content-between">
+                    <span>💵 Загальна сума:</span>
+                    <span class="fw-bold text-primary">@((regularTotal + preorderTotal).ToString("0.00")) грн</span>
+                </h5>
+            </div>
+
+            @{
+                bool isClient = User.IsInRole("client");
+                bool hasPreorder = preorderItems.Any();
+                decimal preorderDeposit = preorderItems.Sum(i => i.Price * i.Quantity * 0.2m);
+            }
+
+            @if (isClient && hasPreorder)
+            {
+                <div class="alert alert-info d-flex justify-content-between align-items-center shadow-sm mb-4">
+                    <div>
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        Для оформлення передзамовлення потрібна передплата у розмірі <strong>@preorderDeposit.ToString("0.00") грн</strong>.
+                    </div>
+                    <a href="@Url.Action("Preorder", "Payment", new { amount = preorderDeposit })" class="btn btn-outline-primary btn-sm">
+                        💳 Оплатити
+                    </a>
+                </div>
+            }
         </div>
     </div>
 
-    <button type="submit" class="btn btn-primary w-100">Підтвердити замовлення</button>
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary btn-lg w-100" @(disableSubmit ? "disabled" : "")>
+            ✅ Підтвердити замовлення
+        </button>
+
+        @if (disableSubmit)
+        {
+            <div class="text-danger text-center mt-2">
+                Щоб підтвердити передзамовлення, сплатіть передплату.
+            </div>
+        }
+    </div>
+
 </form>
 
-<!-- Додаємо клієнтську валідацію -->
+<!-- Валідація -->
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
 }
-    

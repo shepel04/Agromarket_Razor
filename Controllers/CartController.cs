@@ -71,43 +71,42 @@ namespace Agromarket.Controllers
             }
 
             var existingItem = cart.FirstOrDefault(p => p.EntryId == entryId);
+            int currentQuantityInCart = existingItem?.Quantity ?? 0;
+            int totalRequestedQuantity = currentQuantityInCart + quantity;
 
+            if (!entry.IsAvailableForPreorder && totalRequestedQuantity > entry.Quantity)
+            {
+                TempData["StockError"] = $"Неможливо додати {quantity} одиниць товару '{entry.Product.Name}'. Доступно тільки {entry.Quantity - currentQuantityInCart}.";
+                return RedirectToAction("Index");
+            }
+
+            // НОВА ЛОГІКА:
+            if (entry.IsAvailableForPreorder && totalRequestedQuantity > entry.Quantity)
+            {
+                TempData["StockError"] = $"Ви запитали більше товару, ніж є на складі. Ви зможете оформити передзамовлення на '{entry.Product.Name}' після завершення поточного замовлення.";
+                return RedirectToAction("Index");
+            }
+
+            // Додаємо товар у кошик як зазвичай (далі йде твоя існуюча логіка)
             decimal basePrice = entry.HasDiscount == true && entry.DiscountedPrice.HasValue
                 ? entry.DiscountedPrice.Value
                 : (entry.SellingPrice ?? 0);
 
-            bool isBulkOrder = quantity >= 50;
+            bool isBulkOrder = totalRequestedQuantity >= 50;
             bool isPrivileged = User.IsInRole("admin") || User.IsInRole("enterpriseclient");
             bool isClient = User.IsInRole("client");
 
             decimal bulkPrice = Math.Round(basePrice * 0.95m, 2);
-
             decimal finalPrice = (isBulkOrder && isPrivileged) ? bulkPrice : basePrice;
-
             decimal deposit = (isBulkOrder && isClient && !isPrivileged)
-                ? Math.Round(finalPrice * quantity * 0.2m, 2)
+                ? Math.Round(finalPrice * totalRequestedQuantity * 0.2m, 2)
                 : 0;
-            
-            if (isBulkOrder && isClient && !isPrivileged)
-            {
-                deposit = Math.Round(finalPrice * quantity * 0.2m, 2);
-            }
 
             if (existingItem != null)
             {
-                existingItem.Quantity += quantity;
-
-                bool newBulk = existingItem.Quantity >= 50;
-                bool isClientNow = User.IsInRole("client");
-
-                bool nowPrivileged = User.IsInRole("admin") || User.IsInRole("enterpriseclient");
-                existingItem.Price = (newBulk && nowPrivileged)
-                    ? Math.Round(basePrice * 0.95m, 2)
-                    : basePrice;
-
-                existingItem.DepositAmount = (newBulk && isClientNow && !nowPrivileged)
-                    ? Math.Round(existingItem.Price * existingItem.Quantity * 0.2m, 2)
-                    : 0;
+                existingItem.Quantity = totalRequestedQuantity;
+                existingItem.Price = finalPrice;
+                existingItem.DepositAmount = deposit;
             }
             else
             {
@@ -130,6 +129,8 @@ namespace Agromarket.Controllers
             SaveCart(cart);
             return RedirectToAction("Index");
         }
+
+
 
         public IActionResult ProceedToCheckout()
         {
@@ -172,53 +173,132 @@ namespace Agromarket.Controllers
         }
 
         [HttpPost]
-        public JsonResult UpdateQuantityAjax(int entryId, int quantity)
+        public JsonResult UpdateQuantityAjax(int entryId, int quantity, string mode = null)
         {
             var cart = GetCart();
             var item = cart.FirstOrDefault(p => p.EntryId == entryId);
-            var entry = _context.WarehouseEntries.FirstOrDefault(e => e.Id == entryId);
+            var entry = _context.WarehouseEntries
+                .Include(e => e.Product)
+                .FirstOrDefault(e => e.Id == entryId);
 
-            if (item != null && entry != null)
+            if (item == null || entry == null)
             {
-                item.MaxQuantity = entry.Quantity;
-
-                if (quantity > 0 && (entry.IsAvailableForPreorder || quantity <= entry.Quantity))
+                return Json(new
                 {
-                    item.Quantity = quantity;
+                    success = false,
+                    message = "Товар не знайдено у кошику або на складі."
+                });
+            }
 
-                    bool isBulk = quantity >= 50;
-                    bool isPrivileged = User.IsInRole("admin") || User.IsInRole("enterpriseclient");
-                    bool isClient = User.IsInRole("client");
+            int available = entry.Quantity;
+            bool isPreorderAllowed = entry.IsAvailableForPreorder;
+            bool isPrivileged = User.IsInRole("admin") || User.IsInRole("enterpriseclient");
+            bool isClient = User.IsInRole("client");
 
-                    decimal basePrice = entry.HasDiscount == true && entry.DiscountedPrice.HasValue
-                        ? entry.DiscountedPrice.Value
-                        : (entry.SellingPrice ?? 0);
+            decimal basePrice = entry.HasDiscount == true && entry.DiscountedPrice.HasValue
+                ? entry.DiscountedPrice.Value
+                : (entry.SellingPrice ?? 0);
 
-                    item.Price = (isBulk && isPrivileged)
-                        ? Math.Round(basePrice * 0.95m, 2)
-                        : basePrice;
+            decimal bulkPrice = Math.Round(basePrice * 0.95m, 2);
 
-                    item.DepositAmount = (isBulk && isClient && !isPrivileged)
-                        ? Math.Round(item.Price * quantity * 0.2m, 2)
-                        : 0;
+            // Видаляємо стару позицію
+            cart.Remove(item);
 
-                    item.IsPreorder = entry.Quantity == 0 && entry.IsAvailableForPreorder;
-                }
-                else if (quantity > entry.Quantity && !entry.IsAvailableForPreorder)
+            if (quantity <= available || string.IsNullOrEmpty(mode))
+            {
+                // Оновлення звичайної кількості
+                var isBulk = quantity >= 50;
+                cart.Add(new CartItem
                 {
-                    return Json(new
+                    EntryId = entry.Id,
+                    ProductId = entry.ProductId,
+                    Name = entry.Product.Name,
+                    Unit = entry.Product.Unit,
+                    ImageBase64 = entry.Product.ImageData != null ? Convert.ToBase64String(entry.Product.ImageData) : null,
+                    Quantity = quantity,
+                    MaxQuantity = available,
+                    Price = (isBulk && isPrivileged) ? bulkPrice : basePrice,
+                    DepositAmount = (isBulk && isClient && !isPrivileged)
+                        ? Math.Round(((isBulk && isPrivileged) ? bulkPrice : basePrice) * quantity * 0.2m, 2)
+                        : 0,
+                    IsPreorder = false
+                });
+            }
+            else if (mode == "split" && isPreorderAllowed && quantity > available)
+            {
+                int preorderQuantity = quantity - available;
+
+                // Додаємо залишок як звичайне замовлення
+                if (available > 0)
+                {
+                    var isBulkAvailable = available >= 50;
+                    cart.Add(new CartItem
                     {
-                        success = false,
-                        message = $"Максимальна кількість '{item.Name}' у кошику: {entry.Quantity}."
+                        EntryId = entry.Id,
+                        ProductId = entry.ProductId,
+                        Name = entry.Product.Name,
+                        Unit = entry.Product.Unit,
+                        ImageBase64 = entry.Product.ImageData != null ? Convert.ToBase64String(entry.Product.ImageData) : null,
+                        Quantity = available,
+                        MaxQuantity = available,
+                        Price = (isBulkAvailable && isPrivileged) ? bulkPrice : basePrice,
+                        DepositAmount = (isBulkAvailable && isClient && !isPrivileged)
+                            ? Math.Round(((isBulkAvailable && isPrivileged) ? bulkPrice : basePrice) * available * 0.2m, 2)
+                            : 0,
+                        IsPreorder = false
                     });
                 }
-                else
-                {
-                    cart.Remove(item);
-                }
 
-                SaveCart(cart);
+                // Додаємо залишок як передзамовлення
+                var isBulkPreorder = preorderQuantity >= 50;
+                cart.Add(new CartItem
+                {
+                    EntryId = entry.Id,
+                    ProductId = entry.ProductId,
+                    Name = entry.Product.Name,
+                    Unit = entry.Product.Unit,
+                    ImageBase64 = entry.Product.ImageData != null ? Convert.ToBase64String(entry.Product.ImageData) : null,
+                    Quantity = preorderQuantity,
+                    MaxQuantity = 0,
+                    Price = (isBulkPreorder && isPrivileged) ? bulkPrice : basePrice,
+                    DepositAmount = (isBulkPreorder && isClient && !isPrivileged)
+                        ? Math.Round(((isBulkPreorder && isPrivileged) ? bulkPrice : basePrice) * preorderQuantity * 0.2m, 2)
+                        : 0,
+                    IsPreorder = true,
+                    PreorderDate = DateTime.UtcNow.AddDays(7) // Або іншу дату очікуваного надходження
+                });
             }
+            else if (mode == "preorder" && isPreorderAllowed)
+            {
+                // Замовити все як передзамовлення
+                var isBulkPreorder = quantity >= 50;
+                cart.Add(new CartItem
+                {
+                    EntryId = entry.Id,
+                    ProductId = entry.ProductId,
+                    Name = entry.Product.Name,
+                    Unit = entry.Product.Unit,
+                    ImageBase64 = entry.Product.ImageData != null ? Convert.ToBase64String(entry.Product.ImageData) : null,
+                    Quantity = quantity,
+                    MaxQuantity = 0,
+                    Price = (isBulkPreorder && isPrivileged) ? bulkPrice : basePrice,
+                    DepositAmount = (isBulkPreorder && isClient && !isPrivileged)
+                        ? Math.Round(((isBulkPreorder && isPrivileged) ? bulkPrice : basePrice) * quantity * 0.2m, 2)
+                        : 0,
+                    IsPreorder = true,
+                    PreorderDate = DateTime.UtcNow.AddDays(7)
+                });
+            }
+            else
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = "Неможливо оформити замовлення у вказаній кількості."
+                });
+            }
+
+            SaveCart(cart);
 
             decimal totalPrice = cart.Sum(p => p.Price * p.Quantity);
             decimal totalDeposit = cart.Sum(p => p.DepositAmount);
@@ -226,14 +306,11 @@ namespace Agromarket.Controllers
             return Json(new
             {
                 success = true,
-                totalItemPrice = item != null ? item.Price * item.Quantity : 0,
                 totalPrice,
-                totalDeposit,
-                price = item?.Price,
-                deposit = item?.DepositAmount,
-                isPreorder = item?.IsPreorder ?? false
+                totalDeposit
             });
         }
+
 
 
         [HttpPost]

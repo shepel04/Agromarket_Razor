@@ -1,0 +1,107 @@
+﻿@model List<(Microsoft.AspNetCore.Identity.IdentityUser User, string Role)>
+
+@using Agromarket.Models
+@{
+    ViewData["Title"] = "Користувачі клієнти";
+    var userOrders = ViewBag.UserOrders as Dictionary<string, List<Order>> ?? new();
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-success">👥 Користувачі з роллю client та entertaiment</h2>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-success">
+        <tr>
+            <th>Email</th>
+            <th>Роль</th>
+            <th>Дії</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var (user, role) in Model)
+        {
+            <tr>
+                <td>@user.Email</td>
+                <td>@role</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="collapse" data-bs-target="#orders-@user.Id">
+                        Історія замовлень
+                    </button>
+                </td>
+            </tr>
+            <tr class="collapse bg-light" id="orders-@user.Id">
+                <td colspan="3">
+                    @if (userOrders.ContainsKey(user.Id) && userOrders[user.Id].Any())
+                    {
+                        <table class="table table-sm table-hover">
+                            <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Сума</th>
+                                <th>Статус</th>
+                                <th>Деталі</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var order in userOrders[user.Id])
+                            {
+                                <tr>
+                                    <td>@order.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                    <td>@order.TotalAmount грн</td>
+                                    <td>
+                                        <span class="badge @(order.Status == OrderStatus.Виконано ? "bg-success" : "bg-warning")">
+                                            @order.Status
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" onclick="loadOrderDetails(@order.Id)">Деталі</button>
+                                    </td>
+                                </tr>
+                                <tr id="order-details-@order.Id" class="d-none">
+                                    <td colspan="4">
+                                        <div id="details-content-@order.Id" class="border p-3 rounded bg-light">
+                                            <p><strong>Завантаження...</strong></p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Немає замовлень.</p>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<script>
+    async function loadOrderDetails(orderId) {
+        let detailsRow = document.getElementById(`order-details-${orderId}`);
+        let detailsContent = document.getElementById(`details-content-${orderId}`);
+
+        if (!detailsRow.classList.contains("d-none")) {
+            detailsRow.classList.add("d-none");
+            return;
+        }
+
+        detailsRow.classList.remove("d-none");
+
+        try {
+            let response = await fetch(`/Order/GetOrderDetails/${orderId}`);
+            if (response.ok) {
+                let data = await response.text();
+                detailsContent.innerHTML = data;
+            } else {
+                detailsContent.innerHTML = "<p class='text-danger'>Помилка завантаження деталей.</p>";
+            }
+        } catch (error) {
+            console.error("Помилка:", error);
+            detailsContent.innerHTML = "<p class='text-danger'>Не вдалося отримати дані.</p>";
+        }
+    }
+</script>

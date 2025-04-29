@@ -1,0 +1,88 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using Agromarket.Models
+@model List<(IdentityUser User, string Role)>
+@{
+    ViewData["Title"] = "Користувачі та історія замовлень";
+    var userOrders = ViewBag.UserOrders as Dictionary<string, List<Order>> ?? new();
+}
+
+<div class="container mt-4">
+    <h2 class="mb-4 text-success">👤 Користувачі (client, enterprice) та їх замовлення</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-warning">Користувачів із відповідними ролями не знайдено.</div>
+    }
+    else
+    {
+        <div class="accordion" id="usersAccordion">
+            @for (int i = 0; i < Model.Count; i++)
+            {
+                var user = Model[i].User;
+                var role = Model[i].Role;
+                var orders = userOrders.ContainsKey(user.Id) ? userOrders[user.Id] : new List<Order>();
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading-@i">
+                        <button class="accordion-button @((i != 0 ? "collapsed" : ""))" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@i" aria-expanded="@(i == 0 ? "true" : "false")" aria-controls="collapse-@i">
+                            👤 @user.UserName (@user.Email) — <span class="text-muted">роль: @role</span>
+                        </button>
+                    </h2>
+                    <div id="collapse-@i" class="accordion-collapse collapse @(i == 0 ? "show" : "")" aria-labelledby="heading-@i" data-bs-parent="#usersAccordion">
+                        <div class="accordion-body">
+                            @if (!orders.Any())
+                            {
+                                <p class="text-muted">Замовлень немає.</p>
+                            }
+                            else
+                            {
+                                <table class="table table-bordered table-striped">
+                                    <thead class="table-success">
+                                    <tr>
+                                        <th>Дата</th>
+                                        <th>Сума</th>
+                                        <th>Статус</th>
+                                        <th>Деталі</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    @foreach (var order in orders)
+                                    {
+                                        <tr>
+                                            <td>@order.OrderDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                            <td>@order.TotalAmount грн</td>
+                                            <td>
+                                                    <span class="badge @(order.Status == OrderStatus.Виконано ? "bg-success" : "bg-warning")">
+                                                        @order.Status
+                                                    </span>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#details-@order.Id" aria-expanded="false" aria-controls="details-@order.Id">
+                                                    Переглянути
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="collapse" id="details-@order.Id">
+                                            <td colspan="4">
+                                                <strong>Адреса доставки:</strong> @order.DeliveryAddress<br />
+                                                <strong>Телефон:</strong> @order.CustomerPhone<br />
+                                                <strong>Товари:</strong>
+                                                <ul>
+                                                    @foreach (var item in order.OrderItems)
+                                                    {
+                                                        <li>@item.ProductName — @item.Quantity @item.Unit</li>
+                                                    }
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                    }
+                                    </tbody>
+                                </table>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

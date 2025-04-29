@@ -118,3 +118,4 @@ namespace Agromarket.Controllers
         public int ForecastedOrderQuantity { get; set; }
     }
 }
+

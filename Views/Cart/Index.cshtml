@@ -4,29 +4,31 @@
     ViewData["Title"] = "Кошик";
     bool isClient = User.IsInRole("client");
     bool hasBulkWithDeposit = Model.Any(i => i.DepositAmount > 0);
+
+    var regularItems = Model.Where(i => !i.IsPreorder).ToList();
+    var preorderItems = Model.Where(i => i.IsPreorder).ToList();
+
+    var totalRegular = regularItems.Sum(i => i.Price * i.Quantity);
+    var totalPreorder = preorderItems.Sum(i => i.Price * i.Quantity);
+    var totalDeposit = Model.Sum(i => i.DepositAmount);
 }
 
-<div class="container">
+<div class="container my-5">
     <h2 class="text-center mb-4">🛒 Ваш кошик</h2>
 
     @if (TempData["StockError"] != null)
     {
-        <div class="alert alert-danger text-center">
-            @TempData["StockError"]
-        </div>
+        <div class="alert alert-danger text-center">@TempData["StockError"]</div>
     }
 
-    <div id="depositInfo">
-        @if (isClient && hasBulkWithDeposit)
-        {
-            <div class="alert alert-info text-center">
-                <i class="bi bi-info-circle-fill me-2"></i>
-                Ви оформили оптове замовлення. Для підтвердження потрібно внести передплату у розмірі <strong>20%</strong> від суми.
-                <br />
-                Передплата: <strong>@Model.Sum(p => p.DepositAmount).ToString("0.00") грн</strong>
-            </div>
-        }
-    </div>
+    @if (isClient && hasBulkWithDeposit)
+    {
+        <div id="depositInfo" class="alert alert-info text-center">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            Ви оформили оптове замовлення. Передплата:
+            <strong>@totalDeposit.ToString("0.00") грн</strong>
+        </div>
+    }
 
     @if (!Model.Any())
     {
@@ -37,231 +39,227 @@
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Фото</th>
-                        <th>Назва</th>
-                        <th>Ціна</th>
-                        <th>Кількість</th>
-                        <th>Одиниця</th>
-                        <th>Всього</th>
-                        <th>Дії</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model)
-                    {
-                        <tr id="cart-item-@item.EntryId" data-entry-id="@item.EntryId">
-                            <td>
-                                <img src="data:image/png;base64,@item.ImageBase64" class="rounded" style="width: 60px; height: auto;" />
-                            </td>
-                            <td>
-                                <div>
-                                    @item.Name
-                                    <span class="badge bg-success text-white ms-2 @(item.Quantity >= 50 ? "" : "d-none")"
-                                          id="bulk-label-@item.EntryId">
-                                        Оптова ціна
-                                    </span>
-                                    @if (item.PreorderDate != null)
-                                    {
-                                        <div class="text-muted small">Очікувана дата: @item.PreorderDate?.ToString("dd.MM.yyyy")</div>
-                                    }
-                                </div>
-                            </td>
-                            <td class="price" id="price-@item.EntryId">
-                                @item.Price.ToString("0.00") грн
-                            </td>
-
-                            <td>
-                                <input type="number"
-                                       class="form-control text-center"
-                                       style="width: 80px;"
-                                       value="@item.Quantity"
-                                       min="1"
-                                       @(item.IsPreorder ? "" : $"max=\"{item.MaxQuantity}\"")
-                                       onchange="validateQuantity(this, @(item.MaxQuantity), @item.EntryId, @(item.IsPreorder.ToString().ToLower()))" />
-                            </td>
-                            <td>@item.Unit</td>
-                            <td class="total-item-price fw-bold">@((item.Price * item.Quantity).ToString("0.00")) грн</td>
-                            <td>
-                                <button onclick="removeFromCart(@item.EntryId)" class="btn btn-outline-danger btn-sm">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
+        <div class="row g-4">
+            <!-- Блок "В наявності" -->
+            <div class="col-md-6">
+                <h4 class="mb-3 text-success">✅ В наявності</h4>
+                @if (!regularItems.Any())
+                {
+                    <div class="alert alert-secondary">Немає товарів у наявності.</div>
+                }
+                else
+                {
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Товар</th>
+                            <th>Кількість</th>
+                            <th>Ціна</th>
+                            <th>Сума</th>
+                            <th></th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in regularItems)
+                        {
+                            <tr id="cart-item-@item.EntryId">
+                                <td>@item.Name</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm text-center"
+                                           value="@item.Quantity" min="1" max="@item.MaxQuantity"
+                                           onchange="validateQuantity(this, @item.MaxQuantity, @item.EntryId, false)" />
+                                </td>
+                                <td>@item.Price.ToString("0.00") грн</td>
+                                <td class="total-item-price">@((item.Price * item.Quantity).ToString("0.00")) грн</td>
+                                <td>
+                                    <button onclick="removeFromCart(@item.EntryId)" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                    <div class="text-end fw-bold mt-2">
+                        Разом: <span class="text-success" id="totalReady">@totalRegular.ToString("0.00") грн</span>
+                    </div>
+                }
+            </div>
+
+            <!-- Блок "Передзамовлення" -->
+            <div class="col-md-6">
+                <h4 class="mb-3 text-warning">🕓 Передзамовлення</h4>
+                @if (!preorderItems.Any())
+                {
+                    <div class="alert alert-secondary">Немає товарів на передзамовлення.</div>
+                }
+                else
+                {
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Товар</th>
+                            <th>Кількість</th>
+                            <th>Ціна</th>
+                            <th>Сума</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in preorderItems)
+                        {
+                            <tr id="cart-item-@item.EntryId">
+                                <td>
+                                    @item.Name
+                                    <div class="small text-muted">Очікується з: @item.PreorderDate?.ToString("dd.MM.yyyy")</div>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm text-center"
+                                           value="@item.Quantity" min="1"
+                                           onchange="validateQuantity(this, @item.MaxQuantity, @item.EntryId, true)" />
+                                </td>
+                                <td>@item.Price.ToString("0.00") грн</td>
+                                <td class="total-item-price">@((item.Price * item.Quantity).ToString("0.00")) грн</td>
+                                <td>
+                                    <button onclick="removeFromCart(@item.EntryId)" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                    <div class="text-end fw-bold mt-2">
+                        Разом: <span class="text-warning" id="totalPreorder">@totalPreorder.ToString("0.00") грн</span>
+                    </div>
+                }
+            </div>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <h4 class="text-primary">Загальна сума: <span id="totalPrice" class="fw-bold">@Model.Sum(p => p.Price * p.Quantity).ToString("0.00") грн</span></h4>
-            <div>
-                <a href="@Url.Action("ClearCart", "Cart")" class="btn btn-warning">Очистити кошик</a>
-                <a href="@Url.Action("Checkout", "Order")" class="btn btn-success">Оформити замовлення</a>
+        <hr class="my-4" />
+
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="@Url.Action("ClearCart", "Cart")" class="btn btn-outline-warning">Очистити кошик</a>
+            <div class="text-end">
+                <div class="fs-5 fw-bold">Загальна сума: <span id="totalPrice">@((totalRegular + totalPreorder).ToString("0.00")) грн</span></div>
+                <a href="@Url.Action("Checkout", "Order")" class="btn btn-success mt-2">Оформити замовлення</a>
             </div>
         </div>
     }
 </div>
 
-<!-- Повідомлення про помилку залишків -->
-<div id="stockErrorMessage" class="alert alert-danger d-none mt-3 text-center"></div>
-
-<!-- Модальне вікно для повідомлення про нестачу товарів -->
-<div class="modal fade" id="stockErrorModal" tabindex="-1" aria-labelledby="stockErrorModalLabel" aria-hidden="true">
+<!-- Модальне вікно для розподілу кількості, якщо введено більше ніж є в наявності -->
+<div class="modal fade" id="splitQuantityModal" tabindex="-1" aria-labelledby="splitQuantityModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="stockErrorModalLabel">❌ Помилка залишків</h5>
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="splitQuantityModalLabel">Підтвердіть дію</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
             </div>
-            <div class="modal-body" id="stockErrorModalMessage"></div>
+            <div class="modal-body">
+                Ви ввели кількість, що перевищує наявний залишок. Будь ласка, оберіть один із варіантів:
+                <ul>
+                    <li>
+                        Замовити <strong id="availableAmountText"></strong> одиниць, які є в наявності, а решту — як передзамовлення.
+                    </li>
+                    <li>
+                        Оформити все як передзамовлення.
+                    </li>
+                </ul>
+            </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрити</button>
+                <button type="button" class="btn btn-primary" onclick="confirmSplit('split')">Замовити частково</button>
+                <button type="button" class="btn btn-warning" onclick="confirmSplit('preorder')">Замовити все як передзамовлення</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    async function checkStockBeforeCheckout() {
-        try {
-            let response = await fetch('/Cart/CheckStockBeforeCheckout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
+    // Глобальна змінна, щоб зберегти інформацію про зміни
+    let pendingUpdate = null; // { entryId, newQuantity, available }
 
-            let data = await response.json();
-            if (data.success) {
-                window.location.href = data.redirectUrl;
-            } else {
-                let errorMessage = "Недостатньо залишків для наступних товарів:<ul>";
-                data.insufficientStock.forEach(item => {
-                    errorMessage += `<li><strong>${item.name}</strong> (доступно: ${item.available}, потрібно: ${item.requested})</li>`;
-                });
-                errorMessage += "</ul>";
-
-                document.getElementById("stockErrorModalMessage").innerHTML = errorMessage;
-                let stockErrorModal = new bootstrap.Modal(document.getElementById("stockErrorModal"));
-                stockErrorModal.show();
-            }
-        } catch (error) {
-            console.error("Помилка перевірки залишків:", error);
+    function validateQuantity(input, max, entryId, isPreorder = false) {
+        let value = parseInt(input.value);
+        if (isNaN(value) || value < 1) {
+            input.value = 1;
+            value = 1;
+        }
+        // Якщо товар НЕ для передзамовлення і введена кількість менша або рівна max, викликаємо оновлення напряму.
+        if (!isPreorder && value <= max) {
+            updateQuantity(entryId, value, null);
+        }
+        else if (!isPreorder && value > max) {
+            // Якщо товар не для передзамовлення, але значення більше max, відкриваємо модальне вікно з варіантами.
+            pendingUpdate = { entryId: entryId, newQuantity: value, available: max, isPreorder: false };
+            // Встановлюємо текст кількості, що є в наявності.
+            document.getElementById("availableAmountText").textContent = max;
+            let modal = new bootstrap.Modal(document.getElementById("splitQuantityModal"));
+            modal.show();
+        }
+        else if (isPreorder) {
+            // Для вже передзамовлених товарів допускаємо будь-яке значення.
+            updateQuantity(entryId, value, null);
         }
     }
 
-    async function updateQuantity(entryId, quantity) {
-        if (quantity < 1) {
-            removeFromCart(entryId);
-            return;
+    // Функція, що викликається з модального вікна для підтвердження вибору
+    function confirmSplit(mode) {
+        if (pendingUpdate) {
+            // mode 'split' - розділити кількість: наявне стає available, решта попадає в передзамовлення.
+            // mode 'preorder' - все оформити як передзамовлення.
+            updateQuantity(pendingUpdate.entryId, pendingUpdate.newQuantity, mode);
+            pendingUpdate = null;
+            // Закриваємо модальне вікно
+            let modalEl = document.getElementById("splitQuantityModal");
+            let modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
         }
+    }
 
+    async function updateQuantity(entryId, quantity, mode) {
         try {
+            const params = new URLSearchParams();
+            params.append('entryId', entryId);
+            params.append('quantity', quantity);
+            if (mode) {
+                params.append('mode', mode);
+            }
             const response = await fetch('/Cart/UpdateQuantityAjax', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: `entryId=${entryId}&quantity=${quantity}`
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
             });
 
             if (response.ok) {
                 const data = await response.json();
-
                 if (data.success) {
-                    const row = document.getElementById(`cart-item-${entryId}`);
-
-                    row.querySelector(".total-item-price").textContent =
-                        data.totalItemPrice.toFixed(2) + " грн";
-
-                    document.getElementById(`price-${entryId}`).textContent =
-                        data.price.toFixed(2) + " грн";
-
-                    document.getElementById("totalPrice").textContent =
-                        data.totalPrice.toFixed(2) + " грн";
-
-                    const preorderLabel = document.getElementById(`preorder-label-${entryId}`);
-                    if (preorderLabel) {
-                        preorderLabel.classList.toggle("d-none", !data.isPreorder);
-                    }
-
-                    const bulkLabel = document.getElementById(`bulk-label-${entryId}`);
-                    if (bulkLabel) {
-                        bulkLabel.classList.toggle("d-none", !data.isBulkOrder);
-                    }
-
-                    const depositInfo = document.querySelector("#depositInfo");
-                    if (depositInfo && data.totalDeposit > 0) {
-                        depositInfo.innerHTML = `
-                        <div class="alert alert-info text-center">
-                            <i class="bi bi-info-circle-fill me-2"></i>
-                            Ви оформили оптове замовлення. Передплата:
-                            <strong>${data.totalDeposit.toFixed(2)} грн</strong>
-                        </div>`;
-                    } else if (depositInfo) {
-                        depositInfo.innerHTML = "";
-                    }
+                    location.reload();
                 } else {
                     alert(data.message);
                 }
+            } else {
+                alert("Помилка оновлення кількості.");
             }
         } catch (error) {
-            console.error("❌ Помилка оновлення кількості:", error);
+            console.error("Помилка при оновленні кількості:", error);
         }
     }
 
-
-    function validateQuantity(input, max, entryId, isPreorder = false) {
-        let value = parseInt(input.value);
-        if (!isPreorder && value > max) {
-            alert(`Максимальна кількість для цього товару: ${max}`);
-            input.value = max;
-            value = max;
-        }
-        if (value < 1 || isNaN(value)) {
-            input.value = 1;
-            value = 1;
-        }
-        updateQuantity(entryId, value);
-    }
 
     async function removeFromCart(entryId) {
         try {
-            let response = await fetch('/Cart/RemoveFromCartAjax', {
+            const response = await fetch('/Cart/RemoveFromCartAjax', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: `entryId=${entryId}`
             });
-
             if (response.ok) {
-                let data = await response.json();
-                if (data.success) {
-                    document.getElementById(`cart-item-${entryId}`).remove();
-                    document.getElementById("totalPrice").textContent = data.totalPrice.toFixed(2) + " грн";
-
-                    const depositInfo = document.querySelector("#depositInfo");
-                    if (depositInfo && data.totalDeposit > 0) {
-                        depositInfo.innerHTML = `
-                            <div class="alert alert-info text-center">
-                                <i class="bi bi-info-circle-fill me-2"></i>
-                                Ви оформили оптове замовлення. Передплата:
-                                <strong>${data.totalDeposit.toFixed(2)} грн</strong>
-                            </div>`;
-                    } else if (depositInfo) {
-                        depositInfo.innerHTML = "";
-                    }
-
-                    if (document.querySelectorAll("tbody tr").length === 0) {
-                        location.reload();
-                    }
-                }
+                location.reload();
             }
         } catch (error) {
             console.error("Помилка видалення товару:", error);
         }
     }
-
-
 </script>
+    
