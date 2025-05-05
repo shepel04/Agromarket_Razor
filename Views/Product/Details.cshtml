@@ -117,7 +117,13 @@
                         {
                             <div class="mb-3 d-flex align-items-center">
                                 <label for="quantity" class="me-2 fw-bold">Кількість:</label>
-                                <input type="number" name="quantity" id="quantity" value="1" min="1" max="@Model.Quantity" class="form-control w-25 text-center" />
+                                <input type="number"
+                                       name="quantity"
+                                       id="quantity"
+                                       value="1"
+                                       min="1"
+                                       @(Model.IsAvailableForPreorder ? "" : $"max=\"{Model.Quantity}\"")
+                                       class="form-control w-25 text-center" />
                             </div>
 
                             @if (canBulkOrder && Model.Quantity >= 50)
@@ -228,4 +234,19 @@
             }
         });
     });
+
+    function validateQuantity() {
+        const input = document.getElementById("quantity");
+        const quantity = parseInt(input.value);
+        const max = @Model.Quantity;
+        const allowPreorder = @Model.IsAvailableForPreorder.ToString().ToLower();
+
+        if (!allowPreorder && quantity > max) {
+            alert(`Максимальна кількість для замовлення — ${max}.`);
+            input.value = max;
+            return false;
+        }
+
+        return true;
+    }
 </script>

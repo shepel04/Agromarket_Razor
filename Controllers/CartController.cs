@@ -80,7 +80,6 @@ namespace Agromarket.Controllers
                 return RedirectToAction("Index");
             }
 
-            // НОВА ЛОГІКА:
             if (entry.IsAvailableForPreorder && totalRequestedQuantity > entry.Quantity)
             {
                 TempData["StockError"] = $"Ви запитали більше товару, ніж є на складі. Ви зможете оформити передзамовлення на '{entry.Product.Name}' після завершення поточного замовлення.";

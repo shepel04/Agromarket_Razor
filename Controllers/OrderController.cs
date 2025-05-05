@@ -37,159 +37,173 @@ namespace Agromarket.Controllers
             ViewBag.TotalAmount = cart.Sum(i => i.Price * i.Quantity);
             return View(order);
         }
-
+        
         [HttpPost]
-        public async Task<IActionResult> Checkout(Order order)
+public async Task<IActionResult> Checkout(Order order)
+{
+    var cart = GetCart();
+    if (!cart.Any())
+        return RedirectToAction("Index", "Cart");
+
+    if (!ModelState.IsValid)
+    {
+        ViewBag.CartItems = cart;
+        ViewBag.TotalAmount = cart.Sum(i => i.Price * i.Quantity);
+        return View(order);
+    }
+
+    var productIds = cart.Select(c => c.ProductId).ToList();
+
+    using var transaction = await _context.Database.BeginTransactionAsync();
+
+    var warehouseEntries = await _context.WarehouseEntries
+        .Include(e => e.Product)
+        .Where(e => productIds.Contains(e.ProductId))
+        .ToListAsync();
+
+    List<string> insufficient = new();
+
+    var availableStock = warehouseEntries
+        .GroupBy(e => e.ProductId)
+        .ToDictionary(g => g.Key, g => g.Sum(e => e.Quantity));
+
+    // ❗ Перевірка лише для звичайних товарів
+    foreach (var item in cart.Where(c => !c.IsPreorder))
+    {
+        availableStock.TryGetValue(item.ProductId, out int stockQuantity);
+        if (stockQuantity < item.Quantity)
         {
-            var cart = GetCart();
-            if (!cart.Any())
-                return RedirectToAction("Index", "Cart");
+            insufficient.Add($"{item.Name} (доступно: {stockQuantity}, потрібно: {item.Quantity})");
+        }
+    }
 
-            if (!ModelState.IsValid)
-            {
-                ViewBag.CartItems = cart;
-                ViewBag.TotalAmount = cart.Sum(i => i.Price * i.Quantity);
-                return View(order);
-            }
-
-            var productIds = cart.Select(c => c.ProductId).ToList();
-
-            using var transaction = await _context.Database.BeginTransactionAsync();
-
-            var warehouseEntries = await _context.WarehouseEntries
-                .Include(e => e.Product)
-                .Where(e => productIds.Contains(e.ProductId))
+    if (insufficient.Any())
+    {
+        var firstProblemItem = cart.FirstOrDefault(c => insufficient.Any(ins => ins.Contains(c.Name)));
+        if (firstProblemItem != null)
+        {
+            var entries = await _context.WarehouseEntries
+                .Where(e => e.ProductId == firstProblemItem.ProductId)
                 .ToListAsync();
 
-            List<string> insufficient = new();
+            bool isAvailableForPreorder = entries.Any(e => e.IsAvailableForPreorder);
 
-            var availableStock = warehouseEntries
-                .GroupBy(e => e.ProductId)
-                .ToDictionary(g => g.Key, g => g.Sum(e => e.Quantity));
-
-            foreach (var item in cart.Where(c => !c.IsPreorder)) // Перевіряємо лише звичайні товари
+            var viewModel = new OutOfStockViewModel
             {
-                availableStock.TryGetValue(item.ProductId, out int stockQuantity);
+                ProductId = firstProblemItem.EntryId,
+                ProductName = firstProblemItem.Name,
+                IsAvailableForPreorder = isAvailableForPreorder
+            };
 
-                if (stockQuantity < item.Quantity)
-                {
-                    insufficient.Add($"{item.Name} (доступно: {stockQuantity}, потрібно: {item.Quantity})");
-                }
-            }
-
-            if (insufficient.Any())
-            {
-                var firstProblemItem = cart.FirstOrDefault(c => insufficient.Any(ins => ins.Contains(c.Name)));
-                if (firstProblemItem != null)
-                {
-                    var entries = await _context.WarehouseEntries
-                        .Where(e => e.ProductId == firstProblemItem.ProductId)
-                        .ToListAsync();
-
-                    bool isAvailableForPreorder = entries.Any(e => e.IsAvailableForPreorder);
-
-                    var viewModel = new OutOfStockViewModel
-                    {
-                        ProductId = firstProblemItem.EntryId,
-                        ProductName = firstProblemItem.Name,
-                        IsAvailableForPreorder = isAvailableForPreorder
-                    };
-
-                    await transaction.RollbackAsync();
-                    return View("OutOfStock", viewModel);
-                }
-
-                await transaction.RollbackAsync();
-                return RedirectToAction("Checkout");
-            }
-
-            // ======= Нове: Розділяємо на звичайні замовлення і передзамовлення =======
-
-            var regularItems = cart.Where(c => !c.IsPreorder).ToList();
-            var preorderItems = cart.Where(c => c.IsPreorder).ToList();
-
-            // --- 1. Створення основного замовлення (звичайне)
-            if (regularItems.Any())
-            {
-                var regularOrder = new Order
-                {
-                    CustomerName = order.CustomerName,
-                    CustomerEmail = order.CustomerEmail,
-                    CustomerPhone = order.CustomerPhone,
-                    DeliveryAddress = order.DeliveryAddress,
-                    OrderDate = DateTime.UtcNow,
-                    Status = OrderStatus.Виконується,
-                    TotalAmount = regularItems.Sum(c => c.Price * c.Quantity),
-                    OrderItems = regularItems.Select(c => new OrderItem
-                    {
-                        ProductId = c.ProductId,
-                        ProductName = c.Name,
-                        Quantity = c.Quantity,
-                        Price = c.Price,
-                        Unit = c.Unit,
-                        IsPreorder = false
-                    }).ToList()
-                };
-
-                // Списання залишків
-                foreach (var item in regularItems)
-                {
-                    int remainingToDeduct = item.Quantity;
-
-                    var productEntries = warehouseEntries
-                        .Where(e => e.ProductId == item.ProductId && e.Quantity > 0)
-                        .OrderBy(e => e.ReceivedDate)
-                        .ToList();
-
-                    foreach (var entry in productEntries)
-                    {
-                        if (remainingToDeduct <= 0)
-                            break;
-
-                        int deduction = Math.Min(entry.Quantity, remainingToDeduct);
-                        entry.Quantity -= deduction;
-                        remainingToDeduct -= deduction;
-                        _context.WarehouseEntries.Update(entry);
-                    }
-                }
-
-                _context.Orders.Add(regularOrder);
-            }
-
-            // --- 2. Створення передзамовлення
-            if (preorderItems.Any())
-            {
-                var preorderOrder = new Order
-                {
-                    CustomerName = order.CustomerName,
-                    CustomerEmail = order.CustomerEmail,
-                    CustomerPhone = order.CustomerPhone,
-                    DeliveryAddress = order.DeliveryAddress,
-                    OrderDate = DateTime.UtcNow,
-                    Status = OrderStatus.Виконується,
-                    TotalAmount = preorderItems.Sum(c => c.Price * c.Quantity),
-                    OrderItems = preorderItems.Select(c => new OrderItem
-                    {
-                        ProductId = c.ProductId,
-                        ProductName = c.Name,
-                        Quantity = c.Quantity,
-                        Price = c.Price,
-                        Unit = c.Unit,
-                        IsPreorder = true,
-                        PreorderDate = c.PreorderDate ?? DateTime.UtcNow.AddDays(7) // якщо треба додати очікувану дату
-                    }).ToList()
-                };
-
-                _context.Orders.Add(preorderOrder);
-            }
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            ClearCart();
-
-            return RedirectToAction("OrderSuccess");
+            await transaction.RollbackAsync();
+            return View("OutOfStock", viewModel);
         }
+
+        await transaction.RollbackAsync();
+        return RedirectToAction("Checkout");
+    }
+
+    var regularItems = cart.Where(c => !c.IsPreorder).ToList();
+    var preorderItems = cart.Where(c => c.IsPreorder).ToList();
+
+    var user = await _userManager.GetUserAsync(User);
+    var isClient = await _userManager.IsInRoleAsync(user, "client");
+
+    if (isClient && preorderItems.Any())
+    {
+        var expectedDeposit = preorderItems.Sum(p => p.Price * p.Quantity * 0.2m);
+        var paid = HttpContext.Session.GetString("PreorderPaid");
+
+        if (paid != "true")
+        {
+            TempData["PreorderDeposit"] = expectedDeposit.ToString("0.00");
+            return RedirectToAction("Preorder", "Payment", new { amount = expectedDeposit });
+        }
+    }
+
+    // --- Звичайне замовлення
+    if (regularItems.Any())
+    {
+        var regularOrder = new Order
+        {
+            CustomerName = order.CustomerName,
+            CustomerEmail = order.CustomerEmail,
+            CustomerPhone = order.CustomerPhone,
+            DeliveryAddress = order.DeliveryAddress,
+            OrderDate = DateTime.UtcNow,
+            Status = OrderStatus.Виконується,
+            TotalAmount = regularItems.Sum(c => c.Price * c.Quantity),
+            OrderItems = regularItems.Select(c => new OrderItem
+            {
+                ProductId = c.ProductId,
+                ProductName = c.Name,
+                Quantity = c.Quantity,
+                Price = c.Price,
+                Unit = c.Unit,
+                IsPreorder = false
+            }).ToList()
+        };
+
+        foreach (var item in regularItems)
+        {
+            int remainingToDeduct = item.Quantity;
+
+            var productEntries = warehouseEntries
+                .Where(e => e.ProductId == item.ProductId && e.Quantity > 0)
+                .OrderBy(e => e.ReceivedDate)
+                .ToList();
+
+            foreach (var entry in productEntries)
+            {
+                if (remainingToDeduct <= 0)
+                    break;
+
+                int deduction = Math.Min(entry.Quantity, remainingToDeduct);
+                entry.Quantity -= deduction;
+                remainingToDeduct -= deduction;
+                _context.WarehouseEntries.Update(entry);
+            }
+        }
+
+        _context.Orders.Add(regularOrder);
+    }
+
+    // --- Передзамовлення
+    if (preorderItems.Any())
+    {
+        var preorderOrder = new Order
+        {
+            CustomerName = order.CustomerName,
+            CustomerEmail = order.CustomerEmail,
+            CustomerPhone = order.CustomerPhone,
+            DeliveryAddress = order.DeliveryAddress,
+            OrderDate = DateTime.UtcNow,
+            Status = OrderStatus.Виконується,
+            TotalAmount = preorderItems.Sum(c => c.Price * c.Quantity),
+            OrderItems = preorderItems.Select(c => new OrderItem
+            {
+                ProductId = c.ProductId,
+                ProductName = c.Name,
+                Quantity = c.Quantity,
+                Price = c.Price,
+                Unit = c.Unit,
+                IsPreorder = true,
+                PreorderDate = c.PreorderDate ?? DateTime.UtcNow.AddDays(7)
+            }).ToList()
+        };
+
+        _context.Orders.Add(preorderOrder);
+    }
+
+    await _context.SaveChangesAsync();
+    await transaction.CommitAsync();
+
+    ClearCart();
+    HttpContext.Session.Remove("PreorderPaid");
+
+    return RedirectToAction("OrderSuccess");
+}
+
 
 
 

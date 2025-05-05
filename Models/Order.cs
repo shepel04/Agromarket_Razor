@@ -43,5 +43,6 @@ namespace Agromarket.Models
 
         public decimal TotalAmount { get; set; }
         public List<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+        public bool PreorderPaid { get; set; }
     }
 }
