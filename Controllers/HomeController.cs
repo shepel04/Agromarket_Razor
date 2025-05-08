@@ -21,14 +21,19 @@ namespace Agromarket.Controllers
 
         public IActionResult Index()
         {
+            var now = DateTime.UtcNow;
+
             var discountedEntries = _context.WarehouseEntries
                 .Include(e => e.Product)
-                .Where(e => e.HasDiscount && e.Quantity > 0)
+                .Where(e => e.HasDiscount &&
+                            e.Quantity > 0 &&
+                            (e.ExpirationDate == null || e.ExpirationDate > now))
                 .ToList();
 
             var categories = _context.WarehouseEntries
                 .Include(e => e.Product)
-                .Where(e => e.Quantity > 0)
+                .Where(e => e.Quantity > 0 &&
+                            (e.ExpirationDate == null || e.ExpirationDate > now))
                 .Select(e => e.Product.Category)
                 .Where(c => !string.IsNullOrEmpty(c))
                 .Distinct()
@@ -38,6 +43,7 @@ namespace Agromarket.Controllers
 
             return View(discountedEntries);
         }
+
 
 
         

@@ -22,26 +22,40 @@ namespace Agromarket.Controllers.Warehouse
             _userManager = userManager;
         }
 
-        [HttpGet]
-        public IActionResult Warehouse()
+        public IActionResult Warehouse(string sort = "name", string order = "asc")
         {
-            var entries = _context.WarehouseEntries
+            ApplyExpirationDiscount();
+            var now = DateTime.UtcNow;
+
+            var allEntries = _context.WarehouseEntries
                 .Include(e => e.Product)
-                .AsEnumerable()
-                .OrderBy(e => e.Product.Name)
-                .ThenBy(e => e.ExpirationDate)
                 .ToList();
 
-            ViewBag.Products = _context.Products
-                .ToList()
-                .Where(p => p.IsInSeason())
-                .ToList();
+            var expiredFully = allEntries.Where(e => e.ExpirationDate.HasValue && e.Quantity > 0 && e.ExpirationDate.Value <= now).ToList();
+            var nearExpiration = allEntries.Where(e => e.ExpirationDate.HasValue && e.Quantity > 0 && e.ExpirationDate.Value > now && e.ExpirationDate.Value <= now.AddDays(4)).ToList();
+            var mainEntries = allEntries.Where(e => !expiredFully.Contains(e)).AsQueryable();
 
+            mainEntries = (sort, order.ToLower()) switch
+            {
+                ("name", "asc") => mainEntries.OrderBy(e => e.Product.Name),
+                ("name", "desc") => mainEntries.OrderByDescending(e => e.Product.Name),
+                ("quantity", "asc") => mainEntries.OrderBy(e => e.Quantity),
+                ("quantity", "desc") => mainEntries.OrderByDescending(e => e.Quantity),
+                ("price", "asc") => mainEntries.OrderBy(e => e.SellingPrice),
+                ("price", "desc") => mainEntries.OrderByDescending(e => e.SellingPrice),
+                _ => mainEntries.OrderBy(e => e.Product.Name)
+            };
 
+            ViewBag.Sort = sort;
+            ViewBag.Order = order;
+            ViewBag.Products = _context.Products.Select(p => new { p.Id, p.Name }).ToList();
+            ViewBag.SpoilableEntries = expiredFully.Concat(nearExpiration).ToList();
 
-
-            return View(entries);
+            return View(mainEntries.ToList());
         }
+
+
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -299,17 +313,41 @@ namespace Agromarket.Controllers.Warehouse
         public async Task<IActionResult> ApplyDiscount(int entryId, decimal discountPercent, DateTime? discountStartDate, DateTime? discountEndDate)
         {
             var entry = await _context.WarehouseEntries.FindAsync(entryId);
-            if (entry == null) return NotFound();
+            if (entry == null)
+            {
+                TempData["StockError"] = "Надходження не знайдено.";
+                return RedirectToAction("Warehouse");
+            }
 
+            // Перевірка: автоматична знижка вже встановлена
+            if (entry.HasDiscount && entry.DiscountPercent == 30 && 
+                entry.DiscountStartDate == DateTime.UtcNow.Date &&
+                entry.DiscountEndDate == entry.ExpirationDate)
+            {
+                TempData["StockError"] = "Автоматична знижка на товар вже застосована і не може бути змінена вручну.";
+                return RedirectToAction("Warehouse");
+            }
+
+            // Перевірка: дублювання тієї ж знижки
+            if (entry.HasDiscount && entry.DiscountPercent == discountPercent &&
+                entry.DiscountStartDate == discountStartDate &&
+                entry.DiscountEndDate == discountEndDate)
+            {
+                TempData["StockError"] = "Ця знижка вже застосована.";
+                return RedirectToAction("Warehouse");
+            }
+
+            // Застосування знижки
             entry.HasDiscount = true;
             entry.DiscountPercent = discountPercent;
             entry.DiscountStartDate = discountStartDate;
             entry.DiscountEndDate = discountEndDate;
 
             await _context.SaveChangesAsync();
-
+            TempData["StockSuccess"] = "Знижка успішно застосована.";
             return RedirectToAction("Warehouse");
         }
+
         
         public void ApplyExpirationDiscount()
         {
@@ -378,6 +416,15 @@ namespace Agromarket.Controllers.Warehouse
             }
 
             await _context.SaveChangesAsync();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RejectSpoilage(int entryId, string reason)
+        {
+            // TODO: Зберегти причину або змінити статус відхилення
+            TempData["StockError"] = $"Списання товару відхилено. Причина: {reason}";
+            return RedirectToAction("Warehouse");
         }
 
 

@@ -13,6 +13,8 @@
         body {
             background-color: #f6fff6;
         }
+        
+        
 
         .navbar {
             background-color: #e6f4e6;
@@ -110,6 +112,7 @@
     </style>
 </head>
 <body>
+<div id="page-container" class="d-flex flex-column min-vh-100">
 <header>
     <nav class="navbar navbar-expand-lg border-bottom box-shadow mb-3">
         <div class="container-fluid">
@@ -200,7 +203,7 @@
         <a asp-area="" asp-controller="Home" asp-action="Privacy" class="text-success">Privacy</a>
     </div>
 </footer>
-
+</div>
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>

@@ -3,10 +3,25 @@
 @{
     ViewData["Title"] = "Складський облік";
     var serializedProducts = Json.Serialize(ViewBag.Products);
+    string sort = ViewBag.Sort ?? "name";
+    string order = ViewBag.Order ?? "asc";
+    string GetSortUrl(string col)
+    {
+        string nextOrder = (sort == col && order == "asc") ? "desc" : "asc";
+        return Url.Action("Warehouse", "Warehouse", new { sort = col, order = nextOrder });
+    }
+    string SortIcon(string col)
+    {
+        if (ViewBag.Sort == col)
+        {
+            return ViewBag.Order == "asc" ? " ▲" : " ▼";
+        }
+        return "";
+    }
 }
 
 <h2 class="mb-4">Складський облік</h2>
-<div id="liveAlertPlaceholder"></div>
+<div id="liveAlertPlaceholder"></div>   
 
 
 <button class="btn btn-primary mb-3" id="openAddStockModal">➕ Додати товар на склад</button>
@@ -14,12 +29,12 @@
 <table class="table table-bordered table-striped align-middle text-center">
     <thead class="table-light">
     <tr>
-        <th>Назва</th>
+        <th><a href="@GetSortUrl("name")">Назва</a></th>
         <th>Кількість</th>
         <th>Ціна закупівлі</th>
-        <th>Ціна продажу</th>
+        <th><a href="@GetSortUrl("price")">Ціна продажу</a></th>
         <th>Дата надходження</th>
-        <th>Строк придатності</th>
+        <th><a href="@GetSortUrl("expiration")">Строк придатності</a></th>
         <th>Залишок</th>
         <th>Дії</th>
         <th>Передзамовлення</th>
@@ -36,7 +51,20 @@
             daysLeft <= 14 ? "text-warning" : "text-success";
 
         <tr>
-            <td>@entry.Product.Name</td>
+            <td>
+                @{
+                    var base64 = entry.Product.ImageData != null
+                        ? Convert.ToBase64String(entry.Product.ImageData)
+                        : null;
+                    var imgSrc = base64 != null
+                        ? $"data:image/png;base64,{base64}"
+                        : "/img/no-image.png";
+                }
+                <span class="product-tooltip" data-bs-toggle="tooltip" data-bs-html="true" title="<img src='@imgSrc' class='tooltip-image'/>">
+        @entry.Product.Name
+    </span>
+            </td>
+
             <td>@entry.Quantity</td>
             <td>@entry.PurchasePrice.ToString("0.00") грн</td>
             <td>
@@ -52,7 +80,7 @@
             <td>@entry.ShelfLifeWeeks тиж.</td>
             <td>
                 <span class="@shelfColor">
-                    @if (entry.ExpirationDate == null)
+                    @if (entry.Quantity == 0 || entry.ExpirationDate == null)
                     {
                         <text>—</text>
                     }
@@ -177,6 +205,117 @@
     </tbody>
 </table>
 
+@if (ViewBag.SpoilableEntries != null && ((List<Agromarket.Models.WarehouseEntry>)ViewBag.SpoilableEntries).Any())
+{
+    <h3 class="mt-5 text-danger">⚠️ Товари, що потребують списання</h3>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle text-center mb-5">
+        <thead class="table-light">
+            <tr>
+                <th>Назва</th>
+                <th>Кількість</th>
+                <th>Дата надходження</th>
+                <th>Строк придатності</th>
+                <th>Залишок</th>
+                <th>Дії</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in (List<Agromarket.Models.WarehouseEntry>)ViewBag.SpoilableEntries)
+            {
+                double? daysLeft = item.ExpirationDate?.Subtract(DateTime.UtcNow).TotalDays;
+                string shelfColor = daysLeft <= 0 ? "text-danger" :
+                    daysLeft <= 4 ? "text-warning" : "text-success";
+
+                <tr>
+                    <td>
+                        @{
+                            var base64 = item.Product.ImageData != null
+                                ? Convert.ToBase64String(item.Product.ImageData)
+                                : null;
+                            var imgSrc = base64 != null
+                                ? $"data:image/png;base64,{base64}"
+                                : "/img/no-image.png";
+                        }
+                        <span class="product-tooltip" data-bs-toggle="tooltip" data-bs-html="true" title="<img src='@imgSrc' class='tooltip-image'/>">
+                            @item.Product.Name
+                        </span>
+                    </td>
+                    <td>@item.Quantity</td>
+                    <td>@item.ReceivedDate.ToShortDateString()</td>
+                    <td>@item.ShelfLifeWeeks тиж.</td>
+                    <td class="@shelfColor">
+                        @if (daysLeft <= 0)
+                        {
+                            <text>Закінчився</text>
+                        }
+                        else
+                        {
+                            <text>@((int)daysLeft) дн.</text>
+                        }
+                    </td>
+                    <td>
+                        @if (item.ExpirationDate <= DateTime.UtcNow)
+                        {
+                            <!-- Повне списання -->
+                            <form asp-controller="Warehouse" asp-action="DeductStock" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="entryId" value="@item.Id" />
+                                <input type="hidden" name="quantity" value="@item.Quantity" />
+                                <button type="submit" class="btn btn-sm btn-danger">Списати повністю</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <!-- Поштучне списання -->
+                            <form asp-controller="Warehouse" asp-action="DeductStock" method="post" class="d-flex gap-1 justify-content-center mb-2">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="entryId" value="@item.Id" />
+                                <input type="number" name="quantity" class="form-control form-control-sm w-50 text-center" min="1" max="@item.Quantity" required />
+                                <button type="submit" class="btn btn-sm btn-danger">Списати</button>
+                            </form>
+
+                            <!-- Відхилення у модальному вікні -->
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-secondary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#rejectModal-@item.Id">
+                                Відхилити
+                            </button>
+
+                            <!-- Модальне вікно -->
+                            <div class="modal fade" id="rejectModal-@item.Id" tabindex="-1" aria-labelledby="rejectModalLabel-@item.Id" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <form asp-controller="Warehouse" asp-action="RejectSpoilage" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="entryId" value="@item.Id" />
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Відхилення списання: @item.Product.Name</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <label class="form-label">Причина відхилення</label>
+                                                <textarea class="form-control" name="reason" rows="3" required></textarea>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="submit" class="btn btn-outline-secondary">Підтвердити</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </td>
+
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+
 
 
 <div class="modal fade" id="newReceiptModal" tabindex="-1" aria-labelledby="newReceiptModalLabel" aria-hidden="true">
@@ -219,6 +358,42 @@
     .w-10 { width: 10%; }
     .w-15 { width: 15%; }
     .w-30 { width: 30%; }
+
+
+    .tooltip-inner {
+        background-color: #e6f4e6 !important; 
+        color: #145c2b !important; 
+        border: 1px solid #b5ddb5;
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .bs-tooltip-auto[data-popper-placement^="top"] .tooltip-arrow::before,
+    .bs-tooltip-top .tooltip-arrow::before {
+        border-top-color: #e6f4e6 !important;
+    }
+
+    .bs-tooltip-auto[data-popper-placement^="bottom"] .tooltip-arrow::before,
+    .bs-tooltip-bottom .tooltip-arrow::before {
+        border-bottom-color: #e6f4e6 !important;
+    }
+
+    .bs-tooltip-auto[data-popper-placement^="left"] .tooltip-arrow::before,
+    .bs-tooltip-start .tooltip-arrow::before {
+        border-left-color: #e6f4e6 !important;
+    }
+
+    .bs-tooltip-auto[data-popper-placement^="right"] .tooltip-arrow::before,
+    .bs-tooltip-end .tooltip-arrow::before {
+        border-right-color: #e6f4e6 !important;
+    }
+
+    .tooltip-image {
+        max-width: 150px;
+        border-radius: 8px;
+        display: block;
+        margin: 0 auto;
+    }
 </style>
 
 <script>
@@ -329,5 +504,12 @@
                 alert.close();
             }, 5000);
         }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl);
+        });
     });
 </script>
