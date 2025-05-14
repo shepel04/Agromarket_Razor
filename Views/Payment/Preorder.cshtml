@@ -1,0 +1,13 @@
+﻿@{
+    ViewData["Title"] = "Передплата";
+    var amount = ViewBag.Amount;
+}
+
+<div class="container my-5 text-center">
+    <h2>Передплата за передзамовлення</h2>
+    <p>Необхідно внести <strong>@amount.ToString("0.00") грн</strong> для підтвердження замовлення.</p>
+
+    <form asp-action="ConfirmPreorderPayment" method="post">
+        <button type="submit" class="btn btn-success">✅ Підтвердити оплату</button>
+    </form>
+</div>

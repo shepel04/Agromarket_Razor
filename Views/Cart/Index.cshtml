@@ -44,10 +44,148 @@ else
         </tbody>
     </table>
 
+<<<<<<< Updated upstream
     <div class="text-end">
         <h4>Загальна сума: <span id="totalPrice">@Model.Sum(p => p.Price * p.Quantity) грн</span></h4>
         @if (Model.Any())
         {
+=======
+    @if (isClient && hasBulkWithDeposit)
+    {
+        <div id="depositInfo" class="alert alert-info text-center">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            Ви оформили оптове замовлення. Передплата:
+            <strong>@totalDeposit.ToString("0.00") грн</strong>
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="text-center">
+            <p class="text-muted">Ваш кошик порожній.</p>
+            <a href="/" class="btn btn-primary">Перейти до покупок</a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <!-- Блок "В наявності" -->
+            <div class="col-md-6">
+                <h4 class="mb-3 text-success">✅ В наявності</h4>
+                @if (!regularItems.Any())
+                {
+                    <div class="alert alert-secondary">Немає товарів у наявності.</div>
+                }
+                else
+                {
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Товар</th>
+                            <th>Кількість</th>
+                            <th>Ціна</th>
+                            <th>Сума</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in regularItems)
+                        {
+                            <tr id="cart-item-@item.EntryId">
+                                <td>@item.Name</td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm text-center"
+                                           value="@item.Quantity" min="1" max="@item.MaxQuantity"
+                                           data-is-preorder="@item.IsPreorder.ToString().ToLower()"
+                                           onchange="validateQuantity(this, @item.MaxQuantity, @item.EntryId)" />
+
+                                </td>
+                                <td>
+                                    @item.Price.ToString("0.00") грн
+                                    @if (item.Quantity > 50)
+                                    {
+                                        <span class="badge bg-success ms-2">Оптова ціна</span>
+                                    }
+                                </td>
+                                <td class="total-item-price">@((item.Price * item.Quantity).ToString("0.00")) грн</td>
+                                <td>
+                                    <button onclick="removeFromCart(@item.EntryId)" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                    <div class="text-end fw-bold mt-2">
+                        Разом: <span class="text-success" id="totalReady">@totalRegular.ToString("0.00") грн</span>
+                    </div>
+                }
+            </div>
+
+            <!-- Блок "Передзамовлення" -->
+            <div class="col-md-6">
+                <h4 class="mb-3 text-warning">🕓 Передзамовлення</h4>
+                @if (!preorderItems.Any())
+                {
+                    <div class="alert alert-secondary">Немає товарів на передзамовлення.</div>
+                }
+                else
+                {
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Товар</th>
+                            <th>Кількість</th>
+                            <th>Ціна</th>
+                            <th>Сума</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var item in preorderItems)
+                        {
+                            <tr id="cart-item-@item.EntryId">
+                                <td>
+                                    @item.Name
+                                    <div class="small text-muted">Очікується з: @item.PreorderDate?.ToString("dd.MM.yyyy")</div>
+                                </td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm text-center"
+                                           value="@item.Quantity" min="1" max="@item.MaxQuantity"
+                                           data-is-preorder="@item.IsPreorder.ToString().ToLower()"
+                                           onchange="validateQuantity(this, @item.MaxQuantity, @item.EntryId)" />
+
+                                </td>
+                                <td>
+                                    @item.Price.ToString("0.00") грн
+                                    @if (item.Quantity > 50)
+                                    {
+                                        <span class="badge bg-success ms-2">Оптова ціна</span>
+                                    }
+                                </td>
+                                <td class="total-item-price">@((item.Price * item.Quantity).ToString("0.00")) грн</td>
+                                <td>
+                                    <button onclick="removeFromCart(@item.EntryId)" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                    <div class="text-end fw-bold mt-2">
+                        Разом: <span class="text-warning" id="totalPreorder">@totalPreorder.ToString("0.00") грн</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <hr class="my-4" />
+
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="@Url.Action("ClearCart", "Cart")" class="btn btn-outline-warning">Очистити кошик</a>
+>>>>>>> Stashed changes
             <div class="text-end">
                 <a href="@Url.Action("ClearCart", "Cart")" class="btn btn-warning">Очистити кошик</a>
                 <a href="@Url.Action("Checkout", "Order")" class="btn btn-success">Оформити замовлення</a>
@@ -58,6 +196,7 @@ else
 
 <!-- JavaScript для автоматичного оновлення кошика -->
 <script>
+<<<<<<< Updated upstream
     document.addEventListener("DOMContentLoaded", function () {
         document.querySelectorAll(".quantity").forEach(input => {
             input.addEventListener("input", function () {
@@ -82,4 +221,92 @@ else
             });
         });
     });
+=======
+    let pendingUpdate = null; // { entryId, newQuantity, available }
+
+    function validateQuantity(input, max, entryId) {
+        let value = parseInt(input.value);
+        if (isNaN(value) || value < 1) {
+            input.value = 1;
+            value = 1;
+        }
+
+        const isPreorder = input.dataset.isPreorder === "true";
+
+        if (!isPreorder && value <= max) {
+            updateQuantity(entryId, value, null, isPreorder);
+        } else if (!isPreorder && value > max) {
+            pendingUpdate = { entryId: entryId, newQuantity: value, available: max, isPreorder: false };
+            document.getElementById("availableAmountText").textContent = max;
+            let modal = new bootstrap.Modal(document.getElementById("splitQuantityModal"));
+            modal.show();
+        } else if (isPreorder) {
+            updateQuantity(entryId, value, null, isPreorder);
+        }
+    }
+
+
+
+    // Функція, що викликається з модального вікна для підтвердження вибору
+    function confirmSplit(mode) {
+        if (pendingUpdate) {
+            // mode 'split' - розділити кількість: наявне стає available, решта попадає в передзамовлення.
+            // mode 'preorder' - все оформити як передзамовлення.
+            updateQuantity(pendingUpdate.entryId, pendingUpdate.newQuantity, mode);
+            pendingUpdate = null;
+            // Закриваємо модальне вікно
+            let modalEl = document.getElementById("splitQuantityModal");
+            let modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+    }
+
+    async function updateQuantity(entryId, quantity, mode, isPreorder) {
+        try {
+            const params = new URLSearchParams();
+            params.append('entryId', entryId);
+            params.append('quantity', quantity);
+            params.append('isPreorder', isPreorder);
+            if (mode) {
+                params.append('mode', mode);
+            }
+
+            const response = await fetch('/Cart/UpdateQuantityAjax', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            } else {
+                alert("Помилка оновлення кількості.");
+            }
+        } catch (error) {
+            console.error("Помилка при оновленні кількості:", error);
+        }
+    }
+
+
+
+    async function removeFromCart(entryId) {
+        try {
+            const response = await fetch('/Cart/RemoveFromCartAjax', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `entryId=${entryId}`
+            });
+            if (response.ok) {
+                location.reload();
+            }
+        } catch (error) {
+            console.error("Помилка видалення товару:", error);
+        }
+    }
+>>>>>>> Stashed changes
 </script>

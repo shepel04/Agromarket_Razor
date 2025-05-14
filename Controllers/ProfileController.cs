@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 
 namespace Agromarket.Controllers
 {
-    [Authorize(Roles = "admin,client,entertainment")]
     public class ProfileController : Controller
     {
         private readonly ApplicationDbContext _context;

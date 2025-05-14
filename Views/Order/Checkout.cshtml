@@ -32,10 +32,22 @@
             </div>
 
             <div class="mb-3">
+<<<<<<< Updated upstream
                 <label asp-for="CustomerPhone" class="form-label"></label>
                 <input asp-for="CustomerPhone" class="form-control" required
                        pattern="\d*" oninput="this.value=this.value.replace(/\D/g,'')"
                        placeholder="+380">
+=======
+                <label asp-for="CustomerPhone" class="form-label">Телефон</label>
+                <input asp-for="CustomerPhone"
+                       class="form-control"
+                       required
+                       pattern="380\d{9}"
+                       maxlength="12"
+                       oninput="this.value=this.value.replace(/\D/g,'')"
+                       placeholder="380XXXXXXXXX"/>
+               
+>>>>>>> Stashed changes
                 <span asp-validation-for="CustomerPhone" class="text-danger"></span>
             </div>
 
@@ -47,6 +59,7 @@
         </div>
 
         <div class="col-md-6">
+<<<<<<< Updated upstream
             <h4>Ваше замовлення</h4>
             <ul class="list-group mb-3">
                 @foreach (var item in ViewBag.CartItems)
@@ -61,6 +74,87 @@
                     <strong>@ViewBag.TotalAmount грн</strong>
                 </li>
             </ul>
+=======
+            <h4 class="mb-3">Ваше замовлення</h4>
+
+            @if (regularItems.Any())
+            {
+                <div class="mb-3">
+                    <h5 class="text-success">✅ Готові до відправки</h5>
+                    <ul class="list-group">
+                        @foreach (var item in regularItems)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span>@item.Name</span>
+                                    <div class="text-muted small">@item.Quantity @item.Unit</div>
+                                </div>
+                                <strong>@(item.Price * item.Quantity) грн</strong>
+                            </li>
+                        }
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">Сума:</span>
+                            <span class="fw-bold">@regularTotal.ToString("0.00") грн</span>
+                        </li>
+                    </ul>
+                </div>
+            }
+
+            @if (preorderItems.Any())
+            {
+                <div class="mb-3 mt-4">
+                    <h5 class="text-warning">🕓 Передзамовлення</h5>
+                    <ul class="list-group">
+                        @foreach (var item in preorderItems)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span>@item.Name</span>
+                                    <div class="text-muted small">@item.Quantity @item.Unit</div>
+                                    @if (item.PreorderDate != null)
+                                    {
+                                        <div class="text-muted small">Очікувана дата: <strong>@item.PreorderDate?.ToString("dd.MM.yyyy")</strong></div>
+                                    }
+                                </div>
+                                <strong>@(item.Price * item.Quantity) грн</strong>
+                            </li>
+                        }
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">Сума передзамовлення:</span>
+                            <span class="fw-bold">@preorderTotal.ToString("0.00") грн</span>
+                        </li>
+                    </ul>
+                </div>
+            }
+
+            <div class="mt-4 border-top pt-3">
+                <h5 class="d-flex justify-content-between">
+                    <span>💵 Загальна сума:</span>
+                    <span class="fw-bold text-primary">@((regularTotal + preorderTotal).ToString("0.00")) грн</span>
+                </h5>
+            </div>
+
+            @{
+                bool isClient = User.IsInRole("client");
+                bool hasPreorder = preorderItems.Any();
+                decimal preorderDeposit = preorderItems.Sum(i => i.Price * i.Quantity * 0.2m);
+            }
+
+            @if (isClient && hasPreorder)
+            {
+                <div class="alert alert-info d-flex justify-content-between align-items-center shadow-sm mb-4">
+                    <div>
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        Для оформлення передзамовлення потрібна передплата у розмірі <strong>@preorderDeposit.ToString("0.00") грн</strong>.
+                    </div>
+                    <a href="@Url.Action("Preorder", "Payment", new { amount = preorderDeposit })"
+                       class="btn btn-outline-primary btn-sm btn-pay-deposit">
+                        💳 Оплатити
+                    </a>
+
+                </div>
+            }
+>>>>>>> Stashed changes
         </div>
     </div>
 
@@ -71,5 +165,29 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const payButton = document.querySelector(".btn-pay-deposit");
+
+            if (payButton) {
+                payButton.addEventListener("click", function (e) {
+                    const name = document.querySelector("#CustomerName")?.value.trim();
+                    const email = document.querySelector("#CustomerEmail")?.value.trim();
+                    const phone = document.querySelector("#CustomerPhone")?.value.trim();
+                    const address = document.querySelector("#DeliveryAddress")?.value.trim();
+
+                    if (!name || !email || !phone || !address) {
+                        e.preventDefault();
+                        alert("Будь ласка, заповніть усі поля перед переходом до оплати передзамовлення.");
+                        return false;
+                    }
+
+                    return true;
+                });
+            }
+        });
+    </script>
+
 }
     

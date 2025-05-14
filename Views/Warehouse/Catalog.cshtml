@@ -1,0 +1,213 @@
+﻿@model IEnumerable<Agromarket.Models.WarehouseEntry>
+
+@{
+    ViewData["Title"] = "Каталог товарів";
+}
+
+<h2 class="text-center mb-4">Каталог товарів</h2>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar фільтрів -->
+        <div class="col-lg-3 mb-4">
+            <div class="bg-light p-3 shadow-sm rounded">
+                <form id="filterForm" asp-action="Catalog" method="get">
+                    <div class="mb-3">
+                        <input type="text" name="search" class="form-control" placeholder="Пошук за назвою" value="@Context.Request.Query["search"]" />
+                    </div>
+
+                    <div class="mb-3">
+                        <select name="category" class="form-select">
+                            <option value="">Всі категорії</option>
+                            @foreach (var category in ViewBag.Categories as List<string>)
+                            {
+                                <option value="@category" selected="@(Context.Request.Query["category"] == category ? "selected" : null)">
+                                    @category
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <input type="number" name="minPrice" class="form-control" placeholder="Мін. ціна" value="@Context.Request.Query["minPrice"]" />
+                    </div>
+
+                    <div class="mb-3">
+                        <input type="number" name="maxPrice" class="form-control" placeholder="Макс. ціна" value="@Context.Request.Query["maxPrice"]" />
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="inStock" class="form-check-input" value="true"
+                               @(Context.Request.Query["inStock"] == "true" ? "checked" : "") />
+                        <label class="form-check-label">Тільки в наявності</label>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Застосувати</button>
+                        <button type="button" id="resetFilters" class="btn btn-secondary mt-2">Скинути</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Каталог товарів -->
+        <div class="col-lg-9">
+            @if (!Model.Any())
+            {
+                <div class="card text-center border-0 bg-light py-5 animate__animated animate__fadeIn">
+                    <div class="card-body">
+                        <i class="bi bi-search display-3 text-muted mb-3"></i>
+                        <h4 class="text-muted">Нічого не знайдено</h4>
+                        <p class="text-secondary">Не знайдено жодного товару за заданими параметрами.</p>
+                        <button class="btn btn-outline-secondary" id="resetFiltersInline">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Скинути фільтри
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-4">
+                    @foreach (var entry in Model)
+                    {
+                        var product = entry.Product;
+                        var base64 = product.ImageData != null ? Convert.ToBase64String(product.ImageData) : null;
+                        var imgSrc = base64 != null ? $"data:image/png;base64,{base64}" : "/img/no-image.png";
+                        var availabilityText = entry.Quantity > 0
+                            ? $"В наявності: {entry.Quantity} {product.Unit}"
+                            : "Доступно для передзамовлення";
+                        var isAvailable = entry.Quantity > 0 || entry.IsAvailableForPreorder;
+
+                        <div class="col">
+                            <div class="card h-100 product-card shadow-sm">
+                                @if (entry.HasDiscount && entry.DiscountPercent.HasValue && entry.DiscountedPrice.HasValue)
+                                {
+                                    <span class="badge bg-danger position-absolute top-0 end-0 m-2 shadow-sm">
+                                        Знижка @entry.DiscountPercent.Value.ToString("0")%
+                                    </span>
+                                }
+
+                                <a href="@Url.Action("Details", "Product", new { entryId = entry.Id })"
+                                   class="card-link text-decoration-none d-flex flex-column h-100">
+                                    <img src="@imgSrc" class="card-img-top product-image" alt="@product.Name">
+                                    <div class="card-body text-center d-flex flex-column">
+                                        <h6 class="card-title text-truncate">@product.Name</h6>
+
+                                        @if (entry.HasDiscount && entry.DiscountedPrice.HasValue)
+                                        {
+                                            <p class="card-text price">
+                                                <span class="text-danger fw-bold">@entry.DiscountedPrice.Value.ToString("0.00") грн</span><br />
+                                                <small class="text-muted text-decoration-line-through">@entry.SellingPrice?.ToString("0.00") грн</small>
+                                            </p>
+                                        }
+                                        else
+                                        {
+                                            <p class="card-text price">@entry.SellingPrice?.ToString("0.00") грн</p>
+                                        }
+
+                                        <p class="text-muted small mt-auto">@availabilityText</p>
+                                    </div>
+                                </a>
+
+                                @if (isAvailable)
+                                {
+                                    <form asp-controller="Cart" asp-action="AddToCart" method="post" class="d-grid m-2">
+                                        <input type="hidden" name="entryId" value="@entry.Id" />
+                                        <input type="hidden" name="productId" value="@product.Id" />
+                                        <input type="hidden" name="name" value="@product.Name" />
+                                        <input type="hidden" name="price" value="@(entry.HasDiscount ? entry.DiscountedPrice : entry.SellingPrice)" />
+                                        <input type="hidden" name="unit" value="@product.Unit" />
+                                        <input type="hidden" name="imageBase64" value="@base64" />
+                                        <button type="submit" class="btn btn-success btn-sm">Додати в кошик</button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (ViewBag.TotalPages > 1)
+            {
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        @for (int i = 1; i <= ViewBag.TotalPages; i++)
+                        {
+                            var routeValues = new Dictionary<string, string> { { "page", i.ToString() } };
+                            foreach (var key in Context.Request.Query.Keys)
+                            {
+                                if (key != "page" && !string.IsNullOrEmpty(Context.Request.Query[key]))
+                                    routeValues[key] = Context.Request.Query[key].ToString();
+                            }
+
+                            <li class="page-item @(i == ViewBag.CurrentPage ? "active" : "")">
+                                <a class="page-link" asp-action="Catalog" asp-all-route-data="routeValues">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            }
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@4.1.1/animate.min.css" />
+
+<style>
+    .product-card {
+        transition: 0.3s ease-in-out;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+    }
+
+    .product-card:hover {
+        transform: scale(1.02);
+    }
+
+    .product-image {
+        height: 220px;
+        object-fit: contain;
+        padding: 10px;
+        background-color: #fff;
+    }
+
+    .card-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-title {
+        min-height: 2.5em;
+    }
+
+    .card-link {
+        height: 100%;
+    }
+
+    @@media (max-width: 767px) {
+        .product-image {
+            height: 180px;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const resetButton = document.getElementById('resetFilters');
+        const resetInline = document.getElementById('resetFiltersInline');
+        const filterForm = document.getElementById('filterForm');
+
+        resetButton?.addEventListener('click', () => {
+            filterForm.reset();
+            window.location.href = window.location.pathname;
+        });
+
+        resetInline?.addEventListener('click', () => {
+            window.location.href = window.location.pathname;
+        });
+    });
+</script>

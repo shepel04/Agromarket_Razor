@@ -88,7 +88,160 @@
 
 <!-- JavaScript для кнопки "Списати все" -->
 <script>
+<<<<<<< Updated upstream
     function setMaxQuantity(productId, maxQuantity) {
         document.getElementById("deductQuantity-" + productId).value = maxQuantity;
     }
+=======
+    const products = @Html.Raw(serializedProducts);
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const stockModal = new bootstrap.Modal(document.getElementById('newReceiptModal'));
+        const openBtn = document.getElementById("openAddStockModal");
+        const stockTableBody = document.getElementById("stockTableBody");
+        const addBtn = document.getElementById("addStockItem");
+
+        openBtn?.addEventListener("click", () => stockModal.show());
+
+        function createImageIcon(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product || !product.imageData) return "";
+
+            return `
+                <span class="ms-2" data-bs-toggle="tooltip" data-bs-html="true"
+                    title="<img src='data:image/png;base64,${product.imageData}' class='tooltip-image' />"
+                    style="cursor: pointer;">
+                    ❓
+                </span>`;
+        }
+
+        function updateTooltips() {
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (el) {
+                return new bootstrap.Tooltip(el);
+            });
+        }
+
+        addBtn?.addEventListener("click", function () {
+            const index = stockTableBody.querySelectorAll("tr").length;
+
+            const selectOptions = products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            const newRow = document.createElement("tr");
+            newRow.classList.add("stock-item");
+
+            newRow.innerHTML = `
+                <td>
+                    <div class="d-flex align-items-center">
+                        <select name="entries[${index}].ProductId" class="form-select me-2 product-select">${selectOptions}</select>
+                        <span class="image-icon-container"></span>
+                    </div>
+                </td>
+                <td><input type="number" name="entries[${index}].Quantity" class="form-control text-center" min="1" required /></td>
+                <td><input type="number" step="0.01" name="entries[${index}].PurchasePrice" class="form-control text-end" required /></td>
+                <td><input type="number" step="0.01" name="entries[${index}].SellingPrice" class="form-control text-end" /></td>
+                <td><input type="number" name="entries[${index}].ShelfLifeWeeks" class="form-control text-center" min="1" required /></td>
+                <td><button type="button" class="btn btn-outline-danger btn-sm remove-item">🗑</button></td>
+            `;
+
+            stockTableBody.appendChild(newRow);
+            updateIndexes();
+            updateTooltips();
+
+            const select = newRow.querySelector(".product-select");
+            const iconContainer = newRow.querySelector(".image-icon-container");
+
+            select.addEventListener("change", function () {
+                iconContainer.innerHTML = createImageIcon(select.value);
+                updateTooltips();
+            });
+        });
+
+        stockTableBody.addEventListener("click", function (e) {
+            if (e.target.classList.contains("remove-item")) {
+                e.target.closest("tr")?.remove();
+                updateIndexes();
+            }
+        });
+
+        function updateIndexes() {
+            const rows = stockTableBody.querySelectorAll("tr");
+            rows.forEach((row, idx) => {
+                row.querySelectorAll("select, input").forEach(input => {
+                    const name = input.getAttribute("name");
+                    if (name) {
+                        const updated = name.replace(/entries\[\d+\]/, `entries[${idx}]`);
+                        input.setAttribute("name", updated);
+                    }
+                });
+            });
+        }
+
+        // Додаємо перший рядок одразу
+        addBtn?.click();
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('.preorder-toggle').forEach(function (checkbox) {
+            checkbox.addEventListener('change', function () {
+                const entryId = this.dataset.entryId;
+                const isAvailableForPreorder = this.checked;
+
+                const formData = new FormData();
+                formData.append('entryId', entryId);
+                formData.append('isAvailableForPreorder', isAvailableForPreorder);
+
+                const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+                if (tokenInput) {
+                    formData.append('__RequestVerificationToken', tokenInput.value);
+                }
+
+                fetch('/Warehouse/TogglePreorder', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network error');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            showAlert('Статус передзамовлення оновлено успішно.', 'success');
+                        } else {
+                            showAlert('Помилка при оновленні статусу.', 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showAlert('Помилка з\'єднання із сервером.', 'danger');
+                    });
+            });
+        });
+
+        function showAlert(message, type) {
+            const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show mt-3" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрити"></button>
+            </div>
+        `;
+            alertPlaceholder.append(wrapper);
+
+            setTimeout(() => {
+                const alert = bootstrap.Alert.getOrCreateInstance(wrapper.querySelector('.alert'));
+                alert.close();
+            }, 5000);
+        }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+>>>>>>> Stashed changes
 </script>
+
+

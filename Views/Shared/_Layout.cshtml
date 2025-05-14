@@ -28,8 +28,13 @@
                         <a class="nav-link text-dark" asp-controller="Product" asp-action="Catalog">Каталог товарів</a>
                     </li>
 
+<<<<<<< Updated upstream
 
                     @if (User.IsInRole("admin"))
+=======
+                <ul class="navbar-nav ms-auto align-items-center">
+                    @if (!User.IsInRole("clientmanager") || User.IsInRole("warehousemanager"))
+>>>>>>> Stashed changes
                     {
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Admin" asp-action="Index">Адмін Панель</a>
